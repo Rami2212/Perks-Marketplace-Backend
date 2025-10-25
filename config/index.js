@@ -5,10 +5,10 @@ const email = require('./email');
 
 class Config {
   constructor() {
-    this.env = process.env.NODE_ENV || 'development';
+    this.env = process.env.NODE_ENV || 'dev';
     this.port = parseInt(process.env.PORT) || 3000;
     this.apiVersion = process.env.API_VERSION || 'v1';
-    this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   }
 
   // Application configuration
@@ -18,8 +18,8 @@ class Config {
       port: this.port,
       apiVersion: this.apiVersion,
       frontendUrl: this.frontendUrl,
-      isDevelopment: this.env === 'development',
-      isProduction: this.env === 'production',
+      isDevelopment: this.env === 'dev',
+      isProduction: this.env === 'prod',
       isTest: this.env === 'test'
     };
   }
@@ -27,7 +27,7 @@ class Config {
   // CORS configuration
   getCorsConfig() {
     return {
-      origin: this.env === 'production' 
+      origin: this.env === 'prod' 
         ? [this.frontendUrl] 
         : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
       credentials: true,
@@ -87,9 +87,9 @@ class Config {
   // Logging configuration
   getLoggingConfig() {
     return {
-      level: this.env === 'production' ? 'info' : 'debug',
-      format: this.env === 'production' ? 'combined' : 'dev',
-      logToFile: this.env === 'production',
+      level: this.env === 'prod' ? 'info' : 'debug',
+      format: this.env === 'prod' ? 'combined' : 'dev',
+      logToFile: this.env === 'prod',
       logDirectory: './logs'
     };
   }
