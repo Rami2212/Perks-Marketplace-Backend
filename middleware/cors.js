@@ -4,28 +4,49 @@ const config = require('../config').app;
 class CorsMiddleware {
   constructor() {
     this.corsConfig = config.getCorsConfig();
-  }
 
-  // Main CORS configuration
-  corsHandler = cors({
-    origin: this.corsConfig.origin,
-    credentials: this.corsConfig.credentials,
-    optionsSuccessStatus: this.corsConfig.optionsSuccessStatus,
-    methods: this.corsConfig.methods,
-    allowedHeaders: this.corsConfig.allowedHeaders,
-    exposedHeaders: [
-      'X-RateLimit-Limit',
-      'X-RateLimit-Remaining',
-      'X-RateLimit-Reset'
-    ],
-    preflightContinue: false
-  });
+    // Main CORS configuration
+    this.corsHandler = cors({
+      origin: this.corsConfig.origin,
+      credentials: this.corsConfig.credentials,
+      optionsSuccessStatus: this.corsConfig.optionsSuccessStatus,
+      methods: this.corsConfig.methods,
+      allowedHeaders: this.corsConfig.allowedHeaders,
+      exposedHeaders: [
+        'X-RateLimit-Limit',
+        'X-RateLimit-Remaining',
+        'X-RateLimit-Reset'
+      ],
+      preflightContinue: false
+    });
+
+    // File upload CORS
+    this.uploadCors = cors({
+      origin: this.corsConfig.origin,
+      credentials: true,
+      methods: ['POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With'
+      ],
+      maxAge: 86400 // 24 hours preflight cache
+    });
+
+    // Development CORS (very permissive)
+    this.developmentCors = cors({
+      origin: true,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: '*',
+      exposedHeaders: '*'
+    });
+  }
 
   // Dynamic CORS for specific routes
   dynamicCors = (allowedOrigins = []) => {
     return cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
 
         if (allowedOrigins.includes(origin) || this.corsConfig.origin.includes(origin)) {
@@ -43,20 +64,16 @@ class CorsMiddleware {
   // Strict CORS for admin endpoints
   adminCors = cors({
     origin: (origin, callback) => {
-      // In production, only allow specific admin origins
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === 'prod') {
         const adminOrigins = [
           process.env.ADMIN_URL,
           process.env.FRONTEND_URL
         ].filter(Boolean);
 
-        if (!origin || adminOrigins.includes(origin)) {
-          return callback(null, true);
-        }
+        if (!origin || adminOrigins.includes(origin)) return callback(null, true);
         return callback(new Error('Admin access not allowed from this origin'));
       }
 
-      // In development, allow localhost origins
       if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
         return callback(null, true);
       }
@@ -73,9 +90,9 @@ class CorsMiddleware {
     ]
   });
 
-  // Public API CORS (more permissive)
+  // Public API CORS
   publicCors = cors({
-    origin: true, // Allow all origins for public API
+    origin: true,
     credentials: false,
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: [
@@ -89,33 +106,16 @@ class CorsMiddleware {
     ]
   });
 
-  // File upload CORS
-  uploadCors = cors({
-    origin: this.corsConfig.origin,
-    credentials: true,
-    methods: ['POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With'
-    ],
-    maxAge: 86400 // 24 hours preflight cache
-  });
-
-  // Webhook CORS (for external services)
+  // Webhook CORS
   webhookCors = cors({
     origin: (origin, callback) => {
-      // Allow webhook calls from trusted services
       const trustedOrigins = [
         'https://api.stripe.com',
         'https://hooks.zapier.com',
         'https://api.mailchimp.com'
       ];
 
-      if (!origin || trustedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
+      if (!origin || trustedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error('Webhook origin not allowed'));
     },
     credentials: false,
@@ -127,16 +127,14 @@ class CorsMiddleware {
     ]
   });
 
-  // Custom CORS middleware with additional security
+  // Custom secure CORS middleware
   secureCors = (options = {}) => {
     return (req, res, next) => {
-      // Add security headers
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('X-Frame-Options', 'DENY');
       res.setHeader('X-XSS-Protection', '1; mode=block');
       res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-      // Apply CORS
       const corsOptions = {
         ...this.corsConfig,
         ...options
@@ -146,25 +144,10 @@ class CorsMiddleware {
     };
   };
 
-  // Development CORS (very permissive)
-  developmentCors = cors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: '*',
-    exposedHeaders: '*'
-  });
-
   // Get appropriate CORS middleware based on environment
   getCorsMiddleware() {
-    if (process.env.NODE_ENV === 'development') {
-      return this.developmentCors;
-    }
-
-    if (process.env.NODE_ENV === 'test') {
-      return this.publicCors;
-    }
-
+    if (process.env.NODE_ENV === 'dev') return this.developmentCors;
+    if (process.env.NODE_ENV === 'test') return this.publicCors;
     return this.corsHandler;
   }
 }
