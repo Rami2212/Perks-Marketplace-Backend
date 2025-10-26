@@ -25,6 +25,7 @@
   "homepage": "https://github.com/Rami2212/Perks-Marketplace-Backend#readme",
   "dependencies": {
     "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.8.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
