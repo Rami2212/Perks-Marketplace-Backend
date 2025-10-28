@@ -1,6 +1,6 @@
 const database = require('./database');
 const auth = require('./auth');
-const upload = require('./upload');
+const cloudinary = require('./cloudinary');
 const email = require('./email');
 
 class Config {
@@ -131,6 +131,9 @@ module.exports = {
   app: new Config(),
   database,
   auth,
-  upload,
+  // expose the new Cloudinary config under both `cloudinary` and `upload` keys
+  // so existing code that imports `config.upload` keeps working.
+  cloudinary,
+  upload: cloudinary,
   email
 };
