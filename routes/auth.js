@@ -3,7 +3,6 @@ const { body, param } = require('express-validator');
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/auth');
 const rateLimitMiddleware = require('../middleware/rateLimit');
-const uploadMiddleware = require('../middleware/upload');
 
 const router = express.Router();
 
