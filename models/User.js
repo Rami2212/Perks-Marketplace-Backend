@@ -2,6 +2,24 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { USER_ROLES, USER_STATUSES } = require('../utils/constants');
 
+// Cloudinary image schema
+const imageSchema = new mongoose.Schema({
+  url: {
+    type: String,
+    required: true
+  },
+  publicId: {
+    type: String,
+    required: true
+  },
+  filename: String,
+  size: Number,
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -39,12 +57,9 @@ const userSchema = new mongoose.Schema({
     default: USER_STATUSES.ACTIVE,
     required: true
   },
-  avatar: {
-    url: String,
-    filename: String,
-    size: Number,
-    uploadedAt: Date
-  },
+  
+  // Avatar - Updated for Cloudinary
+  avatar: imageSchema,
   
   // Security fields
   twoFactorEnabled: {
@@ -171,6 +186,11 @@ userSchema.virtual('displayName').get(function() {
   return this.name || this.email.split('@')[0];
 });
 
+// Virtual for avatar URL (backwards compatibility)
+userSchema.virtual('avatarUrl').get(function() {
+  return this.avatar?.url || null;
+});
+
 // Pre-save middleware to hash password
 userSchema.pre('save', async function(next) {
   // Only hash the password if it has been modified (or is new)
@@ -275,6 +295,28 @@ userSchema.methods.resetLoginAttempts = function() {
   return this.updateOne({
     $unset: { loginAttempts: 1, lockUntil: 1 }
   });
+};
+
+// Instance method to update avatar (with Cloudinary cleanup)
+userSchema.methods.updateAvatar = async function(avatarData) {
+  // If user has existing avatar, we should delete it from Cloudinary
+  // This should be done in the controller before calling this method
+  this.avatar = {
+    url: avatarData.url,
+    publicId: avatarData.publicId,
+    filename: avatarData.filename,
+    size: avatarData.size,
+    uploadedAt: new Date()
+  };
+  return this.save();
+};
+
+// Instance method to remove avatar
+userSchema.methods.removeAvatar = async function() {
+  // The Cloudinary deletion should be done in the controller
+  // This method just clears the avatar field
+  this.avatar = undefined;
+  return this.save();
 };
 
 // Static method to find user by email with password
