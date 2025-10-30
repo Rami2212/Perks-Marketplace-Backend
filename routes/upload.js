@@ -3,9 +3,8 @@ const router = express.Router();
 const cloudinaryUpload = require('../middleware/cloudinaryUpload');
 const cloudinaryConfig = require('../config/cloudinary');
 const { AppError } = require('../middleware/errorHandler');
-
-// Middleware to check authentication (uncomment when ready)
-// const { protect } = require('../middleware/auth');
+const { authenticate, requireRole, superAdminOnly } = require('../middleware/auth');
+const validationMiddleware = require('../middleware/validation');
 
 /**
  * @route   POST /api/v1/upload/single
@@ -13,7 +12,7 @@ const { AppError } = require('../middleware/errorHandler');
  * @access  Private
  */
 router.post('/single',
-  // protect,
+  authenticate,
   cloudinaryUpload.uploadSingle('image', 'images', 'medium'),
   (req, res, next) => {
     try {
@@ -45,7 +44,7 @@ router.post('/single',
  * @access  Private
  */
 router.post('/multiple',
-  // protect,
+  authenticate,
   cloudinaryUpload.uploadMultiple('images', 10, 'gallery', 'large'),
   (req, res, next) => {
     try {
@@ -78,7 +77,7 @@ router.post('/multiple',
  * @access  Private
  */
 router.post('/perk-images',
-  // protect,
+  authenticate,
   cloudinaryUpload.uploadPerkImages,
   (req, res, next) => {
     try {
@@ -118,7 +117,7 @@ router.post('/perk-images',
  * @access  Private
  */
 router.post('/blog-images',
-  // protect,
+  authenticate,
   cloudinaryUpload.uploadBlogImages,
   (req, res, next) => {
     try {
@@ -149,7 +148,7 @@ router.post('/blog-images',
  * @access  Private
  */
 router.post('/avatar',
-  // protect,
+  authenticate,
   cloudinaryUpload.uploadSingle('avatar', 'avatars', 'thumbnail'),
   (req, res, next) => {
     try {
@@ -188,7 +187,7 @@ router.post('/avatar',
  * @access  Private
  */
 router.delete('/delete',
-  // protect,
+  authenticate,
   async (req, res, next) => {
     try {
       const { publicId } = req.body;
@@ -216,7 +215,7 @@ router.delete('/delete',
  * @access  Private
  */
 router.delete('/delete-multiple',
-  // protect,
+  authenticate,
   async (req, res, next) => {
     try {
       const { publicIds } = req.body;
@@ -247,7 +246,7 @@ router.delete('/delete-multiple',
  * @access  Private
  */
 router.post('/base64',
-  // protect,
+  authenticate,
   async (req, res, next) => {
     try {
       const { image, folder = 'images', preset = 'medium' } = req.body;
@@ -275,7 +274,7 @@ router.post('/base64',
  * @access  Private
  */
 router.post('/from-url',
-  // protect,
+  authenticate,
   async (req, res, next) => {
     try {
       const { imageUrl, folder = 'images', preset = 'medium' } = req.body;
@@ -463,8 +462,8 @@ router.post('/with-watermark',
  * @access  Private (Admin only)
  */
 router.get('/usage-stats',
-  // protect,
-  // adminOnly,
+  authenticate,
+  requireRole(['super_admin', 'content_editor']),
   async (req, res, next) => {
     try {
       const stats = await cloudinaryConfig.getUsageStats();
@@ -541,7 +540,7 @@ router.post('/thumbnail',
  * @access  Private
  */
 router.get('/search',
-  // protect,
+  authenticate,
   async (req, res, next) => {
     try {
       const { tag } = req.query;
