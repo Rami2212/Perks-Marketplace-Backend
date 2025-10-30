@@ -1,3 +1,4 @@
+// middleware/cloudinaryUpload.js
 const multer = require('multer');
 const { AppError } = require('./errorHandler');
 const cloudinaryConfig = require('../config/cloudinary');
@@ -7,7 +8,6 @@ const path = require('path');
 
 class CloudinaryUploadMiddleware {
   constructor() {
-    // Use memory storage instead of disk storage
     this.storage = multer.memoryStorage();
     
     this.maxFileSize = parseInt(process.env.UPLOAD_MAX_SIZE) || 5 * 1024 * 1024; // 5MB
@@ -18,7 +18,6 @@ class CloudinaryUploadMiddleware {
       'image/webp'
     ];
 
-    // Subfolder inside the OS temp dir
     this.tempSubdir = 'perks-marketplace';
   }
 
@@ -43,7 +42,7 @@ class CloudinaryUploadMiddleware {
     });
   }
 
-  // helper: ensure temp directory exists and return its path
+  // Helper: ensure temp directory exists
   async ensureTempDir() {
     const baseTemp = os.tmpdir();
     const tempDir = path.join(baseTemp, this.tempSubdir);
@@ -51,7 +50,7 @@ class CloudinaryUploadMiddleware {
     return tempDir;
   }
 
-  // helper: create safe temp path for a file
+  // Helper: create safe temp path for a file
   async createTempFilePath(originalName) {
     const tempDir = await this.ensureTempDir();
     const safeName = path.basename(originalName || 'upload');
@@ -75,15 +74,12 @@ class CloudinaryUploadMiddleware {
 
         let tempPath;
         try {
-          // Create temporary file for Cloudinary upload using OS temp dir
           tempPath = await this.createTempFilePath(req.file.originalname);
           await fs.writeFile(tempPath, req.file.buffer);
           req.file.path = tempPath;
 
-          // Upload to Cloudinary
           const result = await cloudinaryConfig.uploadImage(req.file, folder, preset);
           
-          // Attach Cloudinary result to request
           req.cloudinaryFile = result;
           req.file.cloudinary = result;
 
@@ -92,7 +88,6 @@ class CloudinaryUploadMiddleware {
           console.error('Cloudinary upload error:', error);
           next(new AppError('Failed to upload image', 500, 'CLOUDINARY_UPLOAD_ERROR'));
         } finally {
-          // Clean up temp file if it was created
           if (tempPath) {
             fs.unlink(tempPath).catch(() => {});
           }
@@ -117,7 +112,6 @@ class CloudinaryUploadMiddleware {
 
         const tempFiles = [];
         try {
-          // Create temporary files for all uploads
           for (const file of req.files) {
             const tempPath = await this.createTempFilePath(file.originalname);
             await fs.writeFile(tempPath, file.buffer);
@@ -125,10 +119,8 @@ class CloudinaryUploadMiddleware {
             tempFiles.push(file);
           }
 
-          // Upload all files to Cloudinary
           const results = await cloudinaryConfig.uploadMultipleImages(tempFiles, folder, preset);
           
-          // Attach Cloudinary results to request
           req.cloudinaryFiles = results;
           req.files = req.files.map((file, index) => ({
             ...file,
@@ -140,7 +132,6 @@ class CloudinaryUploadMiddleware {
           console.error('Cloudinary multiple upload error:', error);
           next(new AppError('Failed to upload images', 500, 'CLOUDINARY_UPLOAD_ERROR'));
         } finally {
-          // Clean up temp files
           await Promise.all(tempFiles.map(f => fs.unlink(f.path).catch(() => {})));
         }
       });
@@ -165,11 +156,9 @@ class CloudinaryUploadMiddleware {
         try {
           const results = {};
           
-          // Process each field
           for (const fieldName of Object.keys(req.files)) {
             const files = req.files[fieldName];
             
-            // Create temporary files
             const tempFiles = [];
             for (const file of files) {
               const tempPath = await this.createTempFilePath(file.originalname);
@@ -179,12 +168,10 @@ class CloudinaryUploadMiddleware {
               allTempFiles.push(file);
             }
 
-            // Upload to Cloudinary
             const uploadResults = await cloudinaryConfig.uploadMultipleImages(tempFiles, folder, preset);
             
             results[fieldName] = uploadResults;
             
-            // Update files with Cloudinary data
             req.files[fieldName] = req.files[fieldName].map((file, index) => ({
               ...file,
               cloudinary: uploadResults[index]
@@ -197,7 +184,6 @@ class CloudinaryUploadMiddleware {
           console.error('Cloudinary fields upload error:', error);
           next(new AppError('Failed to upload images', 500, 'CLOUDINARY_UPLOAD_ERROR'));
         } finally {
-          // Clean up all temp files
           await Promise.all(allTempFiles.map(f => fs.unlink(f.path).catch(() => {})));
         }
       });
@@ -221,7 +207,6 @@ class CloudinaryUploadMiddleware {
       try {
         const result = {};
 
-        // Upload logo
         if (req.files?.logo && req.files.logo[0]) {
           const logoFile = req.files.logo[0];
           logoTemp = await this.createTempFilePath(logoFile.originalname);
@@ -231,7 +216,6 @@ class CloudinaryUploadMiddleware {
           result.logo = await cloudinaryConfig.uploadImage(logoFile, 'logos', 'logo');
         }
 
-        // Upload banner
         if (req.files?.banner && req.files.banner[0]) {
           const bannerFile = req.files.banner[0];
           bannerTemp = await this.createTempFilePath(bannerFile.originalname);
@@ -268,7 +252,6 @@ class CloudinaryUploadMiddleware {
 
       const tempFiles = [];
       try {
-        // Create temporary files
         for (const file of req.files) {
           const tempPath = await this.createTempFilePath(file.originalname);
           await fs.writeFile(tempPath, file.buffer);
@@ -276,10 +259,8 @@ class CloudinaryUploadMiddleware {
           tempFiles.push(file);
         }
 
-        // Upload to Cloudinary
         const results = await cloudinaryConfig.uploadMultipleImages(tempFiles, 'blog', 'medium');
         
-        // Attach Cloudinary results to request
         req.cloudinaryFiles = results;
         req.files = req.files.map((file, index) => ({
           ...file,
@@ -291,7 +272,6 @@ class CloudinaryUploadMiddleware {
         console.error('Blog images upload error:', error);
         next(new AppError('Failed to upload blog images', 500, 'CLOUDINARY_UPLOAD_ERROR'));
       } finally {
-        // Clean up temp files
         await Promise.all(tempFiles.map(f => fs.unlink(f.path).catch(() => {})));
       }
     });
@@ -318,24 +298,6 @@ class CloudinaryUploadMiddleware {
 
     return new AppError('Upload failed', 500, 'UPLOAD_FAILED');
   }
-
-  // Delete image from Cloudinary (helper middleware)
-  deleteImage = async (req, res, next) => {
-    try {
-      const { publicId } = req.body;
-      
-      if (!publicId) {
-        return next(new AppError('Public ID is required', 400, 'MISSING_PUBLIC_ID'));
-      }
-
-      const result = await cloudinaryConfig.deleteImage(publicId);
-      req.deleteResult = result;
-      next();
-    } catch (error) {
-      console.error('Cloudinary delete error:', error);
-      next(new AppError('Failed to delete image', 500, 'CLOUDINARY_DELETE_ERROR'));
-    }
-  };
 }
 
 module.exports = new CloudinaryUploadMiddleware();

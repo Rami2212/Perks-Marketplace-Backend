@@ -2,21 +2,20 @@ const express = require('express');
 const router = express.Router();
 const cloudinaryUpload = require('../middleware/cloudinaryUpload');
 const cloudinaryConfig = require('../config/cloudinary');
-const CloudinaryUtils = require('../utils/cloudinaryUtils');
 const { AppError } = require('../middleware/errorHandler');
 
-// Middleware to check authentication (import your auth middleware)
+// Middleware to check authentication (uncomment when ready)
 // const { protect } = require('../middleware/auth');
 
 /**
  * @route   POST /api/v1/upload/single
  * @desc    Upload single image
- * @access  Public (add protect middleware for private)
+ * @access  Private
  */
 router.post('/single',
-  // protect, // Uncomment to require authentication
+  // protect,
   cloudinaryUpload.uploadSingle('image', 'images', 'medium'),
-  async (req, res, next) => {
+  (req, res, next) => {
     try {
       if (!req.cloudinaryFile) {
         return next(new AppError('No file uploaded', 400, 'NO_FILE'));
@@ -43,11 +42,12 @@ router.post('/single',
 /**
  * @route   POST /api/v1/upload/multiple
  * @desc    Upload multiple images
- * @access  Public
+ * @access  Private
  */
 router.post('/multiple',
+  // protect,
   cloudinaryUpload.uploadMultiple('images', 10, 'gallery', 'large'),
-  async (req, res, next) => {
+  (req, res, next) => {
     try {
       if (!req.cloudinaryFiles || req.cloudinaryFiles.length === 0) {
         return next(new AppError('No files uploaded', 400, 'NO_FILES'));
@@ -80,7 +80,7 @@ router.post('/multiple',
 router.post('/perk-images',
   // protect,
   cloudinaryUpload.uploadPerkImages,
-  async (req, res, next) => {
+  (req, res, next) => {
     try {
       const { logo, banner } = req.uploadedFiles;
 
@@ -120,7 +120,7 @@ router.post('/perk-images',
 router.post('/blog-images',
   // protect,
   cloudinaryUpload.uploadBlogImages,
-  async (req, res, next) => {
+  (req, res, next) => {
     try {
       if (!req.cloudinaryFiles || req.cloudinaryFiles.length === 0) {
         return next(new AppError('No files uploaded', 400, 'NO_FILES'));
@@ -151,22 +151,22 @@ router.post('/blog-images',
 router.post('/avatar',
   // protect,
   cloudinaryUpload.uploadSingle('avatar', 'avatars', 'thumbnail'),
-  async (req, res, next) => {
+  (req, res, next) => {
     try {
       if (!req.cloudinaryFile) {
         return next(new AppError('No file uploaded', 400, 'NO_FILE'));
       }
 
       // Here you would update the user's avatar in database
-      // const user = await User.findById(req.user.id);
-      // if (user.avatar.publicId) {
-      //   await cloudinaryConfig.deleteImage(user.avatar.publicId);
+      // Example:
+      // if (req.user.avatar?.publicId) {
+      //   await cloudinaryConfig.deleteImage(req.user.avatar.publicId);
       // }
-      // user.avatar = {
+      // req.user.avatar = {
       //   url: req.cloudinaryFile.url,
       //   publicId: req.cloudinaryFile.publicId
       // };
-      // await user.save();
+      // await req.user.save();
 
       res.status(200).json({
         success: true,
@@ -225,7 +225,7 @@ router.delete('/delete-multiple',
         return next(new AppError('Public IDs array is required', 400, 'MISSING_PUBLIC_IDS'));
       }
 
-      const result = await CloudinaryUtils.batchDeleteImages(publicIds);
+      const result = await cloudinaryConfig.deleteMultipleImages(publicIds);
 
       res.status(200).json({
         success: true,
@@ -256,7 +256,35 @@ router.post('/base64',
         return next(new AppError('Base64 image is required', 400, 'MISSING_IMAGE'));
       }
 
-      const result = await CloudinaryUtils.uploadBase64(image, folder, preset);
+      const result = await cloudinaryConfig.uploadBase64(image, folder, preset);
+
+      res.status(200).json({
+        success: true,
+        message: 'Image uploaded successfully',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route   POST /api/v1/upload/from-url
+ * @desc    Upload image from URL
+ * @access  Private
+ */
+router.post('/from-url',
+  // protect,
+  async (req, res, next) => {
+    try {
+      const { imageUrl, folder = 'images', preset = 'medium' } = req.body;
+
+      if (!imageUrl) {
+        return next(new AppError('Image URL is required', 400, 'MISSING_URL'));
+      }
+
+      const result = await cloudinaryConfig.uploadFromUrl(imageUrl, folder, preset);
 
       res.status(200).json({
         success: true,
@@ -278,7 +306,8 @@ router.get('/metadata/:publicId',
   async (req, res, next) => {
     try {
       const publicId = req.params.publicId.replace(/:/g, '/');
-      const metadata = await CloudinaryUtils.getImageMetadata(publicId);
+      
+      const metadata = await cloudinaryConfig.getImageDetails(publicId);
 
       res.status(200).json({
         success: true,
@@ -304,7 +333,7 @@ router.post('/generate-url',
         return next(new AppError('Public ID is required', 400, 'MISSING_PUBLIC_ID'));
       }
 
-      const url = CloudinaryUtils.generateOptimizedUrl(publicId, options);
+      const url = cloudinaryConfig.generateOptimizedUrl(publicId, options);
 
       res.status(200).json({
         success: true,
@@ -330,7 +359,7 @@ router.post('/generate-responsive',
         return next(new AppError('Public ID is required', 400, 'MISSING_PUBLIC_ID'));
       }
 
-      const srcset = CloudinaryUtils.generateResponsiveSrcSet(publicId, sizes);
+      const srcset = cloudinaryConfig.generateResponsiveSrcSet(publicId, sizes);
       const urls = cloudinaryConfig.generateResponsiveUrls(publicId);
 
       res.status(200).json({
@@ -364,7 +393,7 @@ router.post('/with-effects',
         return next(new AppError('Effects array is required', 400, 'MISSING_EFFECTS'));
       }
 
-      const url = CloudinaryUtils.generateImageWithEffects(publicId, effects);
+      const url = cloudinaryConfig.generateImageWithEffects(publicId, effects);
 
       res.status(200).json({
         success: true,
@@ -390,7 +419,7 @@ router.post('/with-text',
         return next(new AppError('Public ID and text are required', 400, 'MISSING_PARAMS'));
       }
 
-      const url = CloudinaryUtils.generateImageWithText(publicId, text, options);
+      const url = cloudinaryConfig.generateImageWithText(publicId, text, options);
 
       res.status(200).json({
         success: true,
@@ -416,7 +445,7 @@ router.post('/with-watermark',
         return next(new AppError('Public ID and watermark public ID are required', 400, 'MISSING_PARAMS'));
       }
 
-      const url = CloudinaryUtils.generateImageWithWatermark(publicId, watermarkPublicId, options);
+      const url = cloudinaryConfig.generateImageWithWatermark(publicId, watermarkPublicId, options);
 
       res.status(200).json({
         success: true,
@@ -438,7 +467,7 @@ router.get('/usage-stats',
   // adminOnly,
   async (req, res, next) => {
     try {
-      const stats = await CloudinaryUtils.getUsageStats();
+      const stats = await cloudinaryConfig.getUsageStats();
 
       res.status(200).json({
         success: true,
@@ -464,7 +493,7 @@ router.post('/convert-format',
         return next(new AppError('Public ID is required', 400, 'MISSING_PUBLIC_ID'));
       }
 
-      const url = CloudinaryUtils.generateConvertedImage(publicId, format, quality);
+      const url = cloudinaryConfig.generateConvertedImage(publicId, format, quality);
 
       res.status(200).json({
         success: true,
@@ -473,34 +502,6 @@ router.post('/convert-format',
           format,
           quality
         }
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/**
- * @route   GET /api/v1/upload/search
- * @desc    Search images by tag
- * @access  Private
- */
-router.get('/search',
-  // protect,
-  async (req, res, next) => {
-    try {
-      const { tag } = req.query;
-
-      if (!tag) {
-        return next(new AppError('Tag parameter is required', 400, 'MISSING_TAG'));
-      }
-
-      const results = await CloudinaryUtils.searchByTag(tag);
-
-      res.status(200).json({
-        success: true,
-        count: results.length,
-        data: results
       });
     } catch (error) {
       next(error);
@@ -527,6 +528,34 @@ router.post('/thumbnail',
       res.status(200).json({
         success: true,
         data: { url }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route   GET /api/v1/upload/search
+ * @desc    Search images by tag
+ * @access  Private
+ */
+router.get('/search',
+  // protect,
+  async (req, res, next) => {
+    try {
+      const { tag } = req.query;
+
+      if (!tag) {
+        return next(new AppError('Tag parameter is required', 400, 'MISSING_TAG'));
+      }
+
+      const results = await cloudinaryConfig.searchByTag(tag);
+
+      res.status(200).json({
+        success: true,
+        count: results.length,
+        data: results
       });
     } catch (error) {
       next(error);
