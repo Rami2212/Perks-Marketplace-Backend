@@ -18,7 +18,7 @@ const loggingMiddleware = require('./middleware/logging');
 
 // Import routes
 const authRoutes = require('./routes/auth');
-const uploadRoutes = require('./routes/upload');
+const categoryRoutes = require('./routes/categories');
 const leadRoutes = require('./routes/leads');
 
 const app = express();
@@ -63,8 +63,7 @@ app.use(rateLimitMiddleware.globalLimiter);
 // API routes
 const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
-app.use(`/api/${apiVersion}/upload`, uploadRoutes); // Add upload routes
-//app.use(`/api/${apiVersion}/categories`, categoryRoutes);
+app.use(`/api/${apiVersion}/categories`, categoryRoutes);
 app.use(`/api/${apiVersion}/leads`, leadRoutes);
 
 // Health check endpoint
@@ -108,8 +107,7 @@ app.get(`/api/${apiVersion}`, (req, res) => {
     description: 'API for managing perks, deals, and marketplace functionality',
     endpoints: {
       auth: `/api/${apiVersion}/auth`,
-      upload: `/api/${apiVersion}/upload`,
-      //categories: `/api/${apiVersion}/categories`,
+      categories: `/api/${apiVersion}/categories`,
       leads: `/api/${apiVersion}/leads`,
       health: '/health'
     },
@@ -153,7 +151,7 @@ const server = app.listen(PORT, () => {
   console.log(`API Base URL: http://localhost:${PORT}/api/${apiVersion}`);
   console.log(`Health Check: http://localhost:${PORT}/health`);
   
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'dev') {
     console.log(`\nAvailable endpoints:`);
     console.log(`   AUTH:`);
     console.log(`     POST /api/${apiVersion}/auth/login`);
