@@ -27,7 +27,7 @@ class PerkRepository {
   async findById(id, populate = false) {
     try {
       let query = Perk.findById(id);
-      
+
       if (populate) {
         query = query
           .populate('categoryId', 'name slug')
@@ -37,7 +37,7 @@ class PerkRepository {
           .populate('approval.reviewedBy', 'name email')
           .populate('approval.notes.addedBy', 'name email');
       }
-      
+
       return await query;
     } catch (error) {
       throw new AppError('Database error while finding perk', 500, 'DATABASE_ERROR');
@@ -48,13 +48,13 @@ class PerkRepository {
   async findBySlug(slug, populate = false) {
     try {
       let query = Perk.findOne({ slug });
-      
+
       if (populate) {
         query = query
           .populate('categoryId', 'name slug')
           .populate('clientId', 'name email');
       }
-      
+
       return await query;
     } catch (error) {
       throw new AppError('Database error while finding perk by slug', 500, 'DATABASE_ERROR');
@@ -65,7 +65,7 @@ class PerkRepository {
   async findAll(filters = {}, page = 1, limit = 20, populate = false) {
     try {
       const query = {};
-      
+
       // Apply filters
       if (filters.status) query.status = filters.status;
       if (filters.categoryId) query.categoryId = filters.categoryId;
@@ -75,14 +75,14 @@ class PerkRepository {
       if (filters.isExclusive !== undefined) query.isExclusive = filters.isExclusive;
       if (filters.approvalStatus) query['approval.status'] = filters.approvalStatus;
       if (filters.vendorEmail) query['vendor.email'] = filters.vendorEmail;
-      
+
       // Date range filters
       if (filters.dateFrom || filters.dateTo) {
         query.createdAt = {};
         if (filters.dateFrom) query.createdAt.$gte = new Date(filters.dateFrom);
         if (filters.dateTo) query.createdAt.$lte = new Date(filters.dateTo);
       }
-      
+
       // Search by title, description, or vendor
       if (filters.search) {
         query.$or = [
@@ -91,16 +91,16 @@ class PerkRepository {
           { 'vendor.name': { $regex: filters.search, $options: 'i' } }
         ];
       }
-      
+
       // Tags filter
       if (filters.tags && filters.tags.length > 0) {
         query.tags = { $in: filters.tags };
       }
 
       const skip = (page - 1) * limit;
-      
+
       let baseQuery = Perk.find(query);
-      
+
       if (populate) {
         baseQuery = baseQuery
           .populate('categoryId', 'name slug')
@@ -108,7 +108,7 @@ class PerkRepository {
           .populate('createdBy', 'name email')
           .populate('updatedBy', 'name email');
       }
-      
+
       // Determine sort order
       let sortOptions = { isFeatured: -1, priority: -1, createdAt: -1 };
       if (filters.sortBy) {
@@ -133,7 +133,7 @@ class PerkRepository {
             break;
         }
       }
-      
+
       const [perks, total] = await Promise.all([
         baseQuery
           .sort(sortOptions)
@@ -171,15 +171,15 @@ class PerkRepository {
     try {
       const query = { clientId };
       const skip = (page - 1) * limit;
-      
+
       let baseQuery = Perk.find(query);
-      
+
       if (populate) {
         baseQuery = baseQuery
           .populate('categoryId', 'name slug')
           .populate('approval.reviewedBy', 'name email');
       }
-      
+
       const [perks, total] = await Promise.all([
         baseQuery
           .sort({ updatedAt: -1 })
@@ -198,14 +198,14 @@ class PerkRepository {
   async findByCategoryId(categoryId, page = 1, limit = 20, activeOnly = true) {
     try {
       const query = { categoryId };
-      
+
       if (activeOnly) {
         query.status = 'active';
         query.isVisible = true;
       }
-      
+
       const skip = (page - 1) * limit;
-      
+
       const [perks, total] = await Promise.all([
         Perk.find(query)
           .populate('categoryId', 'name slug')
@@ -233,17 +233,23 @@ class PerkRepository {
   // Update perk
   async update(id, updateData) {
     try {
-      const perk = await Perk.findByIdAndUpdate(
-        id,
-        { ...updateData, updatedAt: new Date() },
-        { new: true, runValidators: true }
-      );
-      
-      if (!perk) {
-        throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
-      }
-      
+      const perk = await Perk.findById(id);
+      if (!perk) throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
+
+      // Merge updateData manually
+      if (updateData.images?.main) perk.images = { ...perk.images, main: updateData.images.main };
+      if (updateData.vendor?.logo) perk.vendor = { ...perk.vendor, logo: updateData.vendor.logo };
+
+      // Copy other top-level fields
+      Object.keys(updateData).forEach(key => {
+        if (!['images', 'vendor'].includes(key)) perk[key] = updateData[key];
+      });
+
+      perk.updatedAt = new Date();
+
+      await perk.save();
       return perk;
+
     } catch (error) {
       if (error instanceof AppError) throw error;
       if (error.code === 11000) {
@@ -264,21 +270,21 @@ class PerkRepository {
   async updateSEO(id, seoData, clientId) {
     try {
       const perk = await Perk.findById(id);
-      
+
       if (!perk) {
         throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
       }
-      
+
       if (!perk.canEditSEO(clientId)) {
         throw new AppError('Not authorized to edit SEO for this perk', 403, 'SEO_EDIT_FORBIDDEN');
       }
-      
+
       const updatedPerk = await Perk.findByIdAndUpdate(
         id,
         { seo: seoData, updatedAt: new Date() },
         { new: true, runValidators: true }
       );
-      
+
       return updatedPerk;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -290,11 +296,11 @@ class PerkRepository {
   async delete(id) {
     try {
       const perk = await Perk.findByIdAndDelete(id);
-      
+
       if (!perk) {
         throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
       }
-      
+
       return perk;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -312,7 +318,7 @@ class PerkRepository {
         status: 'active',
         updatedAt: new Date()
       };
-      
+
       if (notes) {
         updateData.$push = {
           'approval.notes': {
@@ -322,13 +328,13 @@ class PerkRepository {
           }
         };
       }
-      
+
       const perk = await Perk.findByIdAndUpdate(id, updateData, { new: true });
-      
+
       if (!perk) {
         throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
       }
-      
+
       return perk;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -347,7 +353,7 @@ class PerkRepository {
         status: 'rejected',
         updatedAt: new Date()
       };
-      
+
       if (notes) {
         updateData.$push = {
           'approval.notes': {
@@ -357,13 +363,13 @@ class PerkRepository {
           }
         };
       }
-      
+
       const perk = await Perk.findByIdAndUpdate(id, updateData, { new: true });
-      
+
       if (!perk) {
         throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
       }
-      
+
       return perk;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -401,13 +407,13 @@ class PerkRepository {
   async getStats(dateRange = {}) {
     try {
       const matchStage = {};
-      
+
       if (dateRange.start || dateRange.end) {
         matchStage.createdAt = {};
         if (dateRange.start) matchStage.createdAt.$gte = new Date(dateRange.start);
         if (dateRange.end) matchStage.createdAt.$lte = new Date(dateRange.end);
       }
-      
+
       const stats = await Perk.aggregate([
         { $match: matchStage },
         {
@@ -443,7 +449,7 @@ class PerkRepository {
       if (excludeId) {
         query._id = { $ne: excludeId };
       }
-      
+
       const perk = await Perk.findOne(query);
       return !!perk;
     } catch (error) {
@@ -456,7 +462,7 @@ class PerkRepository {
     try {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() + days);
-      
+
       return await Perk.find({
         status: 'active',
         isVisible: true,
@@ -465,9 +471,9 @@ class PerkRepository {
           { 'redemption.expiryDate': { $lte: cutoffDate, $gte: new Date() } }
         ]
       })
-      .populate('categoryId', 'name slug')
-      .populate('clientId', 'name email')
-      .sort({ 'availability.endDate': 1, 'redemption.expiryDate': 1 });
+        .populate('categoryId', 'name slug')
+        .populate('clientId', 'name email')
+        .sort({ 'availability.endDate': 1, 'redemption.expiryDate': 1 });
     } catch (error) {
       throw new AppError('Database error while getting expiring perks', 500, 'DATABASE_ERROR');
     }
@@ -482,7 +488,7 @@ class PerkRepository {
           update: { ...update.data, updatedAt: new Date() }
         }
       }));
-      
+
       return await Perk.bulkWrite(bulkOps);
     } catch (error) {
       throw new AppError('Database error during bulk update', 500, 'DATABASE_ERROR');
