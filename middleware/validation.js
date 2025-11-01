@@ -1,6 +1,8 @@
+// middleware/validation.js
 const { body, param, query, validationResult } = require('express-validator');
 const { AppError } = require('./errorHandler');
 const mongoose = require('mongoose');
+const Joi = require('joi');
 
 class ValidationMiddleware {
   // Handle validation results
@@ -312,6 +314,172 @@ class ValidationMiddleware {
       const validLocations = ['Malaysia', 'Singapore', 'Global'];
       return validLocations.includes(value);
     }
+  };
+
+  // Upload validation schemas
+  uploadValidation = {
+
+    // Delete single image
+    deleteImage: Joi.object({
+      publicId: Joi.string().required().trim()
+    }),
+
+    // Delete multiple images
+    deleteMultiple: Joi.object({
+      publicIds: Joi.array().items(Joi.string().trim()).min(1).max(50).required()
+    }),
+
+    // Base64 upload
+    base64Upload: Joi.object({
+      image: Joi.string().required().pattern(/^data:image\/(jpeg|jpg|png|gif|webp);base64,/),
+      folder: Joi.string().trim().max(50).default('images'),
+      preset: Joi.string().valid('thumbnail', 'medium', 'large', 'banner', 'logo').default('medium')
+    }),
+
+    // URL upload
+    urlUpload: Joi.object({
+      imageUrl: Joi.string().uri().required(),
+      folder: Joi.string().trim().max(50).default('images'),
+      preset: Joi.string().valid('thumbnail', 'medium', 'large', 'banner', 'logo').default('medium')
+    }),
+
+    // Generate optimized URL
+    generateUrl: Joi.object({
+      publicId: Joi.string().required().trim(),
+      options: Joi.object({
+        width: Joi.number().integer().min(1).max(5000),
+        height: Joi.number().integer().min(1).max(5000),
+        crop: Joi.string().valid('fill', 'fit', 'limit', 'scale', 'pad').default('limit'),
+        quality: Joi.string().valid('auto', 'auto:best', 'auto:good', 'auto:eco', 'auto:low').default('auto:good'),
+        format: Joi.string().valid('auto', 'jpg', 'png', 'webp', 'gif').default('auto'),
+        effects: Joi.array().items(Joi.object())
+      }).default({})
+    }),
+
+    // Generate responsive URLs
+    generateResponsive: Joi.object({
+      publicId: Joi.string().required().trim(),
+      sizes: Joi.array().items(Joi.number().integer().min(1).max(5000)).default([320, 640, 1024, 1920])
+    }),
+
+    // Apply effects
+    applyEffects: Joi.object({
+      publicId: Joi.string().required().trim(),
+      effects: Joi.array().items(
+        Joi.object({
+          type: Joi.string().valid(
+            'blur', 'grayscale', 'sepia', 'brightness', 'contrast', 
+            'saturation', 'sharpen', 'pixelate', 'oil_paint', 'vignette'
+          ).required(),
+          value: Joi.number()
+        })
+      ).min(1).required()
+    }),
+
+    // Text overlay
+    textOverlay: Joi.object({
+      publicId: Joi.string().required().trim(),
+      text: Joi.string().required().max(500),
+      options: Joi.object({
+        fontSize: Joi.number().integer().min(8).max(200).default(40),
+        fontFamily: Joi.string().default('Arial'),
+        color: Joi.string().default('white'),
+        gravity: Joi.string().valid(
+          'north', 'south', 'east', 'west', 'center',
+          'north_east', 'north_west', 'south_east', 'south_west'
+        ).default('south'),
+        y: Joi.number().integer().default(20)
+      }).default({})
+    }),
+
+    // Watermark
+    watermark: Joi.object({
+      publicId: Joi.string().required().trim(),
+      watermarkPublicId: Joi.string().required().trim(),
+      options: Joi.object({
+        gravity: Joi.string().valid(
+          'north', 'south', 'east', 'west', 'center',
+          'north_east', 'north_west', 'south_east', 'south_west'
+        ).default('south_east'),
+        opacity: Joi.number().integer().min(0).max(100).default(50),
+        width: Joi.number().integer().min(10).max(1000).default(100),
+        x: Joi.number().integer().default(10),
+        y: Joi.number().integer().default(10)
+      }).default({})
+    }),
+
+    // Convert format
+    convertFormat: Joi.object({
+      publicId: Joi.string().required().trim(),
+      format: Joi.string().valid('jpg', 'png', 'webp', 'gif', 'pdf').default('webp'),
+      quality: Joi.string().valid('auto', 'auto:best', 'auto:good', 'auto:eco', 'auto:low').default('auto')
+    }),
+
+    // Generate thumbnail
+    generateThumbnail: Joi.object({
+      publicId: Joi.string().required().trim(),
+      width: Joi.number().integer().min(10).max(500).default(150),
+      height: Joi.number().integer().min(10).max(500).default(150)
+    }),
+
+    // Search by tag
+    searchByTag: Joi.object({
+      tag: Joi.string().required().trim().min(1).max(50)
+    })
+  };
+
+  // Validation middleware factory
+  validate = (schema) => {
+    return (req, res, next) => {
+      const { error, value } = schema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true
+      });
+    
+      if (error) {
+        const errors = error.details.map(detail => ({
+          field: detail.path.join('.'),
+          message: detail.message
+        }));
+      
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors
+        });
+      }
+    
+      // Replace req.body with validated and sanitized data
+      req.body = value;
+      next();
+    };
+  };
+
+  // Query validation middleware factory
+  validateQuery = (schema) => {
+    return (req, res, next) => {
+      const { error, value } = schema.validate(req.query, {
+        abortEarly: false,
+        stripUnknown: true
+      });
+     
+      if (error) {
+       const errors = error.details.map(detail => ({
+         field: detail.path.join('.'),
+         message: detail.message
+       }));
+
+       return res.status(400).json({
+         success: false,
+         message: 'Validation failed',
+         errors
+       });
+     }
+
+     // Replace req.query with validated and sanitized data
+     req.query = value;
+     next();
+    };
   };
 }
 

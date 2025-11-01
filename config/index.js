@@ -9,6 +9,7 @@ class Config {
     this.port = parseInt(process.env.PORT) || 5000;
     this.apiVersion = process.env.API_VERSION || 'v1';
     this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    this.adminUrl = process.env.ADMIN_URL || null;
   }
 
   // Application configuration
@@ -131,9 +132,7 @@ module.exports = {
   app: new Config(),
   database,
   auth,
-  // expose the new Cloudinary config under both `cloudinary` and `upload` keys
-  // so existing code that imports `config.upload` keeps working.
   cloudinary,
-  upload: cloudinary,
+  upload: cloudinary, // Keep for backwards compatibility
   email
 };
