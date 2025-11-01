@@ -5,6 +5,7 @@ const categorySchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Category name is required'],
+    unique: [true, 'Category name must be unique'],
     trim: true,
     maxlength: [100, 'Category name cannot be more than 100 characters'],
     minlength: [2, 'Category name must be at least 2 characters']
@@ -168,6 +169,7 @@ categorySchema.index({ status: 1, isVisible: 1 });
 categorySchema.index({ level: 1, path: 1 });
 categorySchema.index({ isFeatured: 1, status: 1 });
 categorySchema.index({ name: 'text', description: 'text' });
+categorySchema.index({ name: 1 }, { unique: true });
 
 // Virtual for full hierarchy path
 categorySchema.virtual('fullPath').get(function() {

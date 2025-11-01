@@ -23,11 +23,12 @@ class CategoryRepository {
     }
   }
 
+
   // Find category by ID
   async findById(id, populate = false) {
     try {
       let query = Category.findById(id);
-      
+
       if (populate) {
         query = query
           .populate('parent', 'name slug level image')
@@ -35,7 +36,7 @@ class CategoryRepository {
           .populate('createdBy', 'name email')
           .populate('updatedBy', 'name email');
       }
-      
+
       return await query;
     } catch (error) {
       throw new AppError('Database error while finding category', 500, 'DATABASE_ERROR');
@@ -46,7 +47,7 @@ class CategoryRepository {
   async findBySlug(slug, populate = false) {
     try {
       let query = Category.findOne({ slug });
-      
+
       if (populate) {
         query = query
           .populate('parent', 'name slug level image')
@@ -54,7 +55,7 @@ class CategoryRepository {
           .populate('createdBy', 'name email')
           .populate('updatedBy', 'name email');
       }
-      
+
       return await query;
     } catch (error) {
       throw new AppError('Database error while finding category by slug', 500, 'DATABASE_ERROR');
@@ -65,7 +66,7 @@ class CategoryRepository {
   async findAll(filters = {}, page = 1, limit = 20, populate = false) {
     try {
       const query = {};
-      
+
       // Apply filters
       if (filters.status) query.status = filters.status;
       if (filters.level !== undefined) query.level = filters.level;
@@ -74,7 +75,7 @@ class CategoryRepository {
       if (filters.showInMenu !== undefined) query.showInMenu = filters.showInMenu;
       if (filters.showInFilter !== undefined) query.showInFilter = filters.showInFilter;
       if (filters.isFeatured !== undefined) query.isFeatured = filters.isFeatured;
-      
+
       // Search by name or description
       if (filters.search) {
         query.$or = [
@@ -84,16 +85,16 @@ class CategoryRepository {
       }
 
       const skip = (page - 1) * limit;
-      
+
       let baseQuery = Category.find(query);
-      
+
       if (populate) {
         baseQuery = baseQuery
           .populate('parent', 'name slug level image')
           .populate('createdBy', 'name email')
           .populate('updatedBy', 'name email');
       }
-      
+
       const [categories, total] = await Promise.all([
         baseQuery
           .sort({ level: 1, displayOrder: 1, name: 1 })
@@ -121,12 +122,12 @@ class CategoryRepository {
   async findByParentId(parentId, includeInactive = false) {
     try {
       const query = { parentId };
-      
+
       if (!includeInactive) {
         query.status = 'active';
         query.isVisible = true;
       }
-      
+
       return await Category.find(query)
         .sort({ displayOrder: 1, name: 1 });
     } catch (error) {
@@ -137,16 +138,16 @@ class CategoryRepository {
   // Get root categories
   async getRootCategories(includeInactive = false) {
     try {
-      const query = { 
+      const query = {
         level: 0,
         parentId: null
       };
-      
+
       if (!includeInactive) {
         query.status = 'active';
         query.isVisible = true;
       }
-      
+
       return await Category.find(query)
         .sort({ displayOrder: 1, name: 1 });
     } catch (error) {
@@ -171,11 +172,11 @@ class CategoryRepository {
         { ...updateData, updatedAt: new Date() },
         { new: true, runValidators: true }
       );
-      
+
       if (!category) {
         throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
       }
-      
+
       return category;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -190,16 +191,31 @@ class CategoryRepository {
   async delete(id) {
     try {
       const category = await Category.findById(id);
-      
+
       if (!category) {
         throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
       }
-      
-      const canDelete = await category.canBeDeleted();
-      if (!canDelete) {
-        throw new AppError('Category cannot be deleted because it has subcategories or perks', 400, 'CATEGORY_HAS_DEPENDENCIES');
+
+      if (category.parentId) {
+        const subcategories = await categoryRepository.find({ parentId: categoryId });
+        if (subcategories.length > 0) {
+          throw new AppError(
+            'Category cannot be deleted because it has subcategories. Delete them first.',
+            400,
+            'CATEGORY_HAS_SUBCATEGORIES'
+          );
+        }
       }
-      
+
+      // const perks = await perkRepository.find({ categoryId: categoryId }); // replace perkRepository with your actual perks repo
+      // if (perks.length > 0) {
+      //   throw new AppError(
+      //     'Category cannot be deleted because it has associated perks. Delete them first.',
+      //     400,
+      //     'CATEGORY_HAS_PERKS'
+      //   );
+      // }
+
       await Category.findByIdAndDelete(id);
       return category;
     } catch (error) {
@@ -215,7 +231,7 @@ class CategoryRepository {
       if (!category) {
         throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
       }
-      
+
       return await category.getFullHierarchy();
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -233,17 +249,17 @@ class CategoryRepository {
         level = null,
         parentId = null
       } = options;
-      
+
       const searchQuery = {
         $text: { $search: query },
         status: status
       };
-      
+
       if (level !== null) searchQuery.level = level;
       if (parentId !== null) searchQuery.parentId = parentId;
-      
+
       const skip = (page - 1) * limit;
-      
+
       const [categories, total] = await Promise.all([
         Category.find(searchQuery)
           .populate('parent', 'name slug')
@@ -252,7 +268,7 @@ class CategoryRepository {
           .limit(limit),
         Category.countDocuments(searchQuery)
       ]);
-      
+
       return { categories, total };
     } catch (error) {
       throw new AppError('Database error while searching categories', 500, 'DATABASE_ERROR');
@@ -267,8 +283,8 @@ class CategoryRepository {
         isVisible: true,
         showInMenu: true
       })
-      .populate('subcategories', 'name slug perkCount image displayOrder')
-      .sort({ level: 1, displayOrder: 1, name: 1 });
+        .populate('subcategories', 'name slug perkCount image displayOrder')
+        .sort({ level: 1, displayOrder: 1, name: 1 });
     } catch (error) {
       throw new AppError('Database error while getting menu categories', 500, 'DATABASE_ERROR');
     }
@@ -283,7 +299,7 @@ class CategoryRepository {
         showInFilter: true,
         perkCount: { $gt: 0 }
       })
-      .sort({ displayOrder: 1, name: 1 });
+        .sort({ displayOrder: 1, name: 1 });
     } catch (error) {
       throw new AppError('Database error while getting filter categories', 500, 'DATABASE_ERROR');
     }
@@ -305,7 +321,7 @@ class CategoryRepository {
       if (excludeId) {
         query._id = { $ne: excludeId };
       }
-      
+
       const category = await Category.findOne(query);
       return !!category;
     } catch (error) {

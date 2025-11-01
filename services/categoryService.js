@@ -232,40 +232,22 @@ class CategoryService {
   }
 
   // Delete category and clean up image
-  async deleteCategory(id) {
+  async deleteCategory(categoryId) {
     try {
-      const category = await categoryRepository.findById(id);
+      const category = await categoryRepository.findById(categoryId);
       if (!category) {
         throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
       }
 
-      const canDelete = await category.canBeDeleted();
-      if (!canDelete) {
-        throw new AppError('Category cannot be deleted because it has subcategories or perks', 400, 'CATEGORY_HAS_DEPENDENCIES');
-      }
+      await categoryRepository.delete(categoryId);
 
-      // Delete associated image
-      if (category.image?.publicId) {
-        try {
-          await uploadService.deleteSingleImage(category.image.publicId);
-        } catch (error) {
-          console.warn('Failed to delete category image:', error.message);
-        }
-      }
-
-      const deletedCategory = await categoryRepository.delete(id);
-
-      // Update parent category counters
-      if (deletedCategory.parentId) {
-        await categoryRepository.updateCounters(deletedCategory.parentId);
-      }
-
-      return deletedCategory;
+      return true;
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError('Failed to delete category', 500, 'DELETE_CATEGORY_ERROR');
     }
   }
+
 
   // Get root categories
   async getRootCategories(includeInactive = false) {
