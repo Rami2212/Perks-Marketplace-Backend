@@ -13,11 +13,11 @@ const createPerkValidation = [
     .trim()
     .isLength({ min: 3, max: 200 })
     .withMessage('Title must be between 3 and 200 characters'),
-  body('description')
+  body('shortDescription')
     .notEmpty()
     .trim()
     .isLength({ min: 10, max: 2000 })
-    .withMessage('Description must be between 10 and 2000 characters'),
+    .withMessage('Short description must be between 10 and 2000 characters'),
   body('categoryId')
     .isMongoId()
     .withMessage('Valid category ID is required'),

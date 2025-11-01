@@ -22,6 +22,10 @@ class PerkService {
         perkData.images = { main: mainImageData };
       }
 
+      if (!perkData.vendor) {
+        perkData.vendor = {};
+      }
+
       if (imageFiles.vendorLogo) {
         const logoData = await this.processImageUpload(imageFiles.vendorLogo);
         perkData.vendor.logo = logoData;
@@ -45,7 +49,7 @@ class PerkService {
       }
 
       const perk = await perkRepository.create(perkData);
-      
+
       // Update category counters
       if (perk.categoryId) {
         await categoryRepository.updateCounters(perk.categoryId);
@@ -67,14 +71,21 @@ class PerkService {
       }
 
       const uploadResult = await uploadService.processSingleUpload(imageFile, 'perks', 'medium');
-      
+
       if (!uploadResult.success) {
         throw new AppError('Failed to upload image', 500, 'UPLOAD_FAILED');
       }
 
       const { url, publicId, format, width, height, size, uploadedAt } = uploadResult.data;
       const thumbnailResult = uploadService.generateThumbnail(publicId, 300, 300);
-      
+
+      // Delete temp file
+      if (imageFile.path) {
+        fs.unlink(imageFile.path, (err) => {
+          if (err) console.error('Failed to delete temp file:', err);
+        });
+      }
+
       return {
         url,
         publicId,
@@ -91,11 +102,11 @@ class PerkService {
   async getPerkById(id, includeRelations = false) {
     try {
       const perk = await perkRepository.findById(id, includeRelations);
-      
+
       if (!perk) {
         throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
       }
-      
+
       return perk;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -107,16 +118,16 @@ class PerkService {
   async getPerkBySlug(slug, includeRelations = false) {
     try {
       const perk = await perkRepository.findBySlug(slug, includeRelations);
-      
+
       if (!perk) {
         throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
       }
-      
+
       // Only return if perk is active and visible for public access
       if (perk.status !== 'active' || !perk.isVisible) {
         throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
       }
-      
+
       return perk;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -228,7 +239,7 @@ class PerkService {
         throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
       }
 
-      // Handle image uploads and replacements
+      //Handle image uploads and replacements
       if (imageFiles.mainImage) {
         // Delete old main image
         if (perk.images?.main?.publicId) {
@@ -241,6 +252,10 @@ class PerkService {
 
         const mainImageData = await this.processImageUpload(imageFiles.mainImage);
         updateData.images = { ...updateData.images, main: mainImageData };
+      }
+
+      if (!updateData.vendor) {
+        updateData.vendor = {};
       }
 
       if (imageFiles.vendorLogo) {
@@ -259,9 +274,9 @@ class PerkService {
 
       // Set updater
       updateData.updatedBy = userId;
-
-      const updatedPerk = await perkRepository.update(id, updateData);
       
+      const updatedPerk = await perkRepository.update(id, updateData);
+
       // Update category counters if category changed
       if (updateData.categoryId && updateData.categoryId !== perk.categoryId) {
         if (perk.categoryId) {
@@ -297,15 +312,15 @@ class PerkService {
 
       // Delete associated images
       const imagesToDelete = [];
-      
+
       if (perk.images?.main?.publicId) {
         imagesToDelete.push(perk.images.main.publicId);
       }
-      
+
       if (perk.vendor?.logo?.publicId) {
         imagesToDelete.push(perk.vendor.logo.publicId);
       }
-      
+
       if (perk.images?.gallery) {
         perk.images.gallery.forEach(img => {
           if (img.publicId) imagesToDelete.push(img.publicId);
@@ -322,7 +337,7 @@ class PerkService {
       }
 
       const deletedPerk = await perkRepository.delete(id);
-      
+
       // Update category counters
       if (deletedPerk.categoryId) {
         await categoryRepository.updateCounters(deletedPerk.categoryId);
