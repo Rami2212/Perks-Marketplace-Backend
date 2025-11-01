@@ -66,6 +66,13 @@ class RateLimitMiddleware {
             store: this.store
         });
 
+        // Category creation limiter
+        this.categoryCreationLimiter = this.createLimiter({
+            windowMs: 60 * 1000,
+            max: 20,
+            message: 'Too many category creation requests, please try again later'
+        });
+
         // Lead submission limiter
         this.leadSubmissionLimiter = this.createLimiter({
             windowMs: 60 * 1000,
