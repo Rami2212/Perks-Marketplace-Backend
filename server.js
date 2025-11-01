@@ -18,8 +18,8 @@ const loggingMiddleware = require('./middleware/logging');
 
 // Import routes
 const authRoutes = require('./routes/auth');
-// Add your upload routes
-const uploadRoutes = require('./routes/upload'); // You'll create this
+const uploadRoutes = require('./routes/upload');
+const leadRoutes = require('./routes/leads');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,6 +64,8 @@ app.use(rateLimitMiddleware.globalLimiter);
 const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
 app.use(`/api/${apiVersion}/upload`, uploadRoutes); // Add upload routes
+//app.use(`/api/${apiVersion}/categories`, categoryRoutes);
+app.use(`/api/${apiVersion}/leads`, leadRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -79,7 +81,7 @@ app.get('/health', async (req, res) => {
     } catch (err) {
       console.error('Cloudinary health check failed:', err);
     }
-    
+
     res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
@@ -107,6 +109,8 @@ app.get(`/api/${apiVersion}`, (req, res) => {
     endpoints: {
       auth: `/api/${apiVersion}/auth`,
       upload: `/api/${apiVersion}/upload`,
+      //categories: `/api/${apiVersion}/categories`,
+      leads: `/api/${apiVersion}/leads`,
       health: '/health'
     },
     documentation: `${req.protocol}://${req.get('host')}/docs`,
@@ -123,7 +127,7 @@ app.use(errorHandler);
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {
   console.log(`${signal} received. Shutting down gracefully...`);
-  
+
   server.close(() => {
     console.log('HTTP server closed.');
     database.disconnect().then(() => {
@@ -150,17 +154,20 @@ const server = app.listen(PORT, () => {
   console.log(`Health Check: http://localhost:${PORT}/health`);
   
   if (process.env.NODE_ENV === 'development') {
-    console.log(`\n📋 Available endpoints:`);
-    console.log(`   POST /api/${apiVersion}/auth/login`);
-    console.log(`   POST /api/${apiVersion}/auth/register`);
-    console.log(`   GET  /api/${apiVersion}/auth/me`);
-    console.log(`   POST /api/${apiVersion}/auth/refresh-token`);
-    console.log(`   POST /api/${apiVersion}/auth/logout`);
-    console.log(`   POST /api/${apiVersion}/upload/single`);
-    console.log(`   POST /api/${apiVersion}/upload/multiple`);
-    console.log(`   POST /api/${apiVersion}/upload/perk-images`);
-    console.log(`   DELETE /api/${apiVersion}/upload/delete`);
-    console.log(`   GET  /health`);
+    console.log(`\nAvailable endpoints:`);
+    console.log(`   AUTH:`);
+    console.log(`     POST /api/${apiVersion}/auth/login`);
+    console.log(`     POST /api/${apiVersion}/auth/register`);
+    console.log(`     GET  /api/${apiVersion}/auth/me`);
+    console.log(`   CATEGORIES:`);
+    console.log(`     GET  /api/${apiVersion}/categories/tree`);
+    console.log(`     POST /api/${apiVersion}/categories (auth required)`);
+    console.log(`   LEADS:`);
+    console.log(`     POST /api/${apiVersion}/leads/submit`);
+    console.log(`     GET  /api/${apiVersion}/leads (auth required)`);
+    console.log(`     GET  /api/${apiVersion}/leads/stats (auth required)`);
+    console.log(`   HEALTH:`);
+    console.log(`     GET  /health`);
   }
 });
 
