@@ -1,14 +1,18 @@
-const mongoose = require('mongoose');
+const { MongoClient } = require('mongodb');
 
 class Database {
   constructor() {
-    this.connection = null; // Cached connection
+    this.client = null;       // MongoClient instance
+    this.db = null;           // Cached database connection
   }
 
+  /**
+   * Connect to MongoDB
+   */
   async connect() {
-    if (this.connection) {
+    if (this.db) {
       // Reuse existing connection (important for serverless)
-      return this.connection;
+      return this.db;
     }
 
     try {
@@ -21,53 +25,65 @@ class Database {
         throw new Error('MONGODB_URI not set');
       }
 
-      const options = {
+      // Create a new MongoClient
+      this.client = new MongoClient(mongoUri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
-        bufferCommands: false,
-      };
-
-      this.connection = await mongoose.connect(mongoUri, options);
-
-      console.log(`MongoDB Connected: ${this.connection.connection.host}`);
-
-      mongoose.connection.on('error', (err) => {
-        console.error('MongoDB connection error:', err);
       });
 
-      mongoose.connection.on('disconnected', () => {
-        console.log('MongoDB disconnected');
-      });
+      // Connect
+      await this.client.connect();
 
-      return this.connection;
+      // Cache the database (default: from URI)
+      const dbName = process.env.MONGODB_DB || this.client.db().databaseName;
+      this.db = this.client.db(dbName);
+
+      console.log(`MongoDB Connected: ${mongoUri}`);
+
+      // Event listeners
+      this.client.on('close', () => console.log('MongoDB connection closed'));
+      this.client.on('error', (err) => console.error('MongoDB error:', err));
+
+      return this.db;
     } catch (error) {
       console.error('Database connection failed:', error.message);
-      throw error; // Don't exit, let Vercel handle
+      throw error; // Let Vercel handle it
     }
   }
 
+  /**
+   * Disconnect from MongoDB
+   */
   async disconnect() {
     try {
-      if (!this.connection) return;
-      await mongoose.connection.close();
-      this.connection = null;
+      if (!this.client) return;
+      await this.client.close();
+      this.client = null;
+      this.db = null;
       console.log('MongoDB connection closed');
     } catch (error) {
       console.error('Error closing MongoDB connection:', error);
     }
   }
 
+  /**
+   * Get current database instance
+   */
   getConnection() {
-    return this.connection;
+    return this.db;
   }
 
+  /**
+   * Health check
+   */
   async isHealthy() {
     try {
-      const state = mongoose.connection.readyState;
-      return state === 1;
+      if (!this.client) return false;
+      // Ping the database
+      await this.db.command({ ping: 1 });
+      return true;
     } catch (error) {
       return false;
     }
