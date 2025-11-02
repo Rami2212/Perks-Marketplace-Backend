@@ -13,10 +13,7 @@ class Database {
     }
 
     try {
-      const mongoUri =
-        process.env.NODE_ENV === 'test'
-          ? process.env.MONGODB_TEST_URI
-          : process.env.MONGODB_URI;
+      const mongoUri ='mongodb+srv://ramitha:whSvEQkRTV4ce9iy@ramitha.jooba2d.mongodb.net/Perk-Marketplace?retryWrites=true&w=majority&appName=ramitha';
 
       if (!mongoUri) {
         throw new Error('MONGODB_URI not set');
