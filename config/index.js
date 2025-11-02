@@ -61,6 +61,11 @@ class Config {
       global: {
         windowMs: 15 * 60 * 1000, // 15 minutes
         max: 1000, // limit each IP to 1000 requests per windowMs
+        standardHeaders: true,
+        legacyHeaders: false,
+        keyGenerator: (req) => {
+          return req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        },
         message: 'Too many requests from this IP, please try again later'
       },
       auth: {

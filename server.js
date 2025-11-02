@@ -20,6 +20,7 @@ const loggingMiddleware = require('./middleware/logging');
 const authRoutes = require('./routes/auth');
 const categoryRoutes = require('./routes/categories');
 const leadRoutes = require('./routes/leads');
+const perkRoutes = require('./routes/perks');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -54,6 +55,9 @@ if (Array.isArray(logger)) {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Enable trust proxy for proper IP detection behind reverse proxies
+app.set('trust proxy', 1);
+
 // Rate limiting
 app.use(rateLimitMiddleware.globalLimiter);
 
@@ -65,6 +69,7 @@ const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
 app.use(`/api/${apiVersion}/categories`, categoryRoutes);
 app.use(`/api/${apiVersion}/leads`, leadRoutes);
+app.use(`/api/${apiVersion}/perks`, perkRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -109,6 +114,7 @@ app.get(`/api/${apiVersion}`, (req, res) => {
       auth: `/api/${apiVersion}/auth`,
       categories: `/api/${apiVersion}/categories`,
       leads: `/api/${apiVersion}/leads`,
+      perks: `/api/${apiVersion}/perks`,
       health: '/health'
     },
     documentation: `${req.protocol}://${req.get('host')}/docs`,
@@ -160,6 +166,14 @@ const server = app.listen(PORT, () => {
     console.log(`   CATEGORIES:`);
     console.log(`     GET  /api/${apiVersion}/categories/tree`);
     console.log(`     POST /api/${apiVersion}/categories (auth required)`);
+    console.log(`     PUT  /api/${apiVersion}/categories/:id (auth required)`);
+    console.log(`     DELETE /api/${apiVersion}/categories/:id (auth required)`);
+    console.log(`   PERKS:`);
+    console.log(`     GET  /api/${apiVersion}/perks/category/:categorySlug`);
+    console.log(`     POST /api/${apiVersion}/perks/:id/click`);
+    console.log(`     GET  /api/${apiVersion}/perks/my-perks (auth required)`);
+    console.log(`     PUT  /api/${apiVersion}/perks/:id/seo (auth required)`);
+    console.log(`     DELETE /api/${apiVersion}/perks/:id (auth required)`);
     console.log(`   LEADS:`);
     console.log(`     POST /api/${apiVersion}/leads/submit`);
     console.log(`     GET  /api/${apiVersion}/leads (auth required)`);

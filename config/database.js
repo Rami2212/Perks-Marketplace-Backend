@@ -2,29 +2,38 @@ const mongoose = require('mongoose');
 
 class Database {
   constructor() {
-    this.connection = null;
+    this.connection = null; // Cached connection
   }
 
   async connect() {
+    if (this.connection) {
+      // Reuse existing connection (important for serverless)
+      return this.connection;
+    }
+
     try {
-      const mongoUri = process.env.NODE_ENV === 'test' 
-        ? process.env.MONGODB_TEST_URI 
-        : process.env.MONGODB_URI;
+      const mongoUri =
+        process.env.NODE_ENV === 'test'
+          ? process.env.MONGODB_TEST_URI
+          : process.env.MONGODB_URI;
+
+      if (!mongoUri) {
+        throw new Error('MONGODB_URI not set');
+      }
 
       const options = {
         useNewUrlParser: true,
         useUnifiedTopology: true,
-        maxPoolSize: 10, // Maintain up to 10 socket connections
-        serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-        socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-        bufferCommands: false, // Disable mongoose buffering
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        bufferCommands: false,
       };
 
       this.connection = await mongoose.connect(mongoUri, options);
-      
+
       console.log(`MongoDB Connected: ${this.connection.connection.host}`);
-      
-      // Handle connection events
+
       mongoose.connection.on('error', (err) => {
         console.error('MongoDB connection error:', err);
       });
@@ -33,22 +42,18 @@ class Database {
         console.log('MongoDB disconnected');
       });
 
-      // Graceful shutdown
-      process.on('SIGINT', async () => {
-        await this.disconnect();
-        process.exit(0);
-      });
-
       return this.connection;
     } catch (error) {
       console.error('Database connection failed:', error.message);
-      process.exit(1);
+      throw error; // Don't exit, let Vercel handle
     }
   }
 
   async disconnect() {
     try {
+      if (!this.connection) return;
       await mongoose.connection.close();
+      this.connection = null;
       console.log('MongoDB connection closed');
     } catch (error) {
       console.error('Error closing MongoDB connection:', error);
@@ -59,11 +64,10 @@ class Database {
     return this.connection;
   }
 
-  // Health check for database
   async isHealthy() {
     try {
       const state = mongoose.connection.readyState;
-      return state === 1; // 1 = connected
+      return state === 1;
     } catch (error) {
       return false;
     }
