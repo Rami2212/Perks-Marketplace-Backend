@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-require("dotenv").config();
 
 class Database {
   constructor() {
@@ -13,7 +12,10 @@ class Database {
     }
 
     try {
-      const mongoUri ='mongodb+srv://ramitha:whSvEQkRTV4ce9iy@ramitha.jooba2d.mongodb.net/Perk-Marketplace?retryWrites=true&w=majority&appName=ramitha';
+      const mongoUri =
+        process.env.NODE_ENV === 'test'
+          ? process.env.MONGODB_TEST_URI
+          : process.env.MONGODB_URI;
 
       if (!mongoUri) {
         throw new Error('MONGODB_URI not set');
