@@ -61,7 +61,7 @@ class CategoryService {
       if (!validation.valid) {
         throw new AppError(`Image validation failed: ${validation.errors.join(', ')}`, 400, 'INVALID_IMAGE');
       }
-
+      
       // Upload original image
       const uploadResult = await uploadService.processSingleUpload(imageFile, 'categories', 'medium');
 
@@ -75,11 +75,11 @@ class CategoryService {
       const thumbnailResult = uploadService.generateThumbnail(publicId, 300, 300);
 
       // Delete temp file
-      if (imageFile.path) {
-        fs.unlink(imageFile.path, (err) => {
-          if (err) console.error('Failed to delete temp file:', err);
-        });
-      }
+      // if (imageFile.path) {
+      //   fs.unlink(imageFile.path, (err) => {
+      //     if (err) console.error('Failed to delete temp file:', err);
+      //   });
+      // }
 
       return {
         url,
@@ -92,6 +92,8 @@ class CategoryService {
         uploadedAt: new Date(uploadedAt)
       };
     } catch (error) {
+        console.error('Image upload error:', error);
+
       if (error instanceof AppError) throw error;
       throw new AppError('Failed to process image upload', 500, 'IMAGE_PROCESSING_ERROR');
     }

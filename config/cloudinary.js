@@ -68,32 +68,62 @@ class CloudinaryConfig {
   }
 
   // Upload image to Cloudinary
-  async uploadImage(file, folder = 'images', preset = 'medium') {
-    try {
-      const transformations = this.getTransformationPresets()[preset];
-      const options = this.getUploadOptions(folder, transformations);
+  // Upload image to Cloudinary
+async uploadImage(file, folder = 'images', preset = 'medium') {
+  try {
+    const transformations = this.getTransformationPresets()[preset];
+    const options = this.getUploadOptions(folder, transformations);
 
-      // Upload from buffer or file path
-      const result = await cloudinary.uploader.upload(file.path || file.buffer, {
+    const publicId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
+    let result;
+
+    if (file.path) {
+      // ✅ If multer uses diskStorage
+      result = await cloudinary.uploader.upload(file.path, {
         ...options,
-        public_id: `${Date.now()}-${Math.round(Math.random() * 1E9)}`
+        public_id: publicId
       });
 
-      return {
-        url: result.secure_url,
-        publicId: result.public_id,
-        format: result.format,
-        width: result.width,
-        height: result.height,
-        size: result.bytes,
-        resourceType: result.resource_type,
-        createdAt: result.created_at
+    } else if (file.buffer) {
+      // ✅ If multer uses memoryStorage
+      const streamUpload = () => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { ...options, public_id: publicId },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          stream.end(file.buffer); // write buffer to the upload stream
+        });
       };
-    } catch (error) {
-      console.error('Cloudinary upload error:', error);
-      throw new Error(`Failed to upload image to Cloudinary: ${error.message}`);
+
+      result = await streamUpload();
+
+    } else {
+      throw new Error('No valid file path or buffer found for upload.');
     }
+
+    // ✅ Return normalized result object
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      format: result.format,
+      width: result.width,
+      height: result.height,
+      size: result.bytes,
+      resourceType: result.resource_type,
+      createdAt: result.created_at
+    };
+
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    throw new Error(`Failed to upload image to Cloudinary: ${error.message}`);
   }
+}
+
 
   // Upload multiple images
   async uploadMultipleImages(files, folder = 'images', preset = 'medium') {
