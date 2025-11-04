@@ -37,7 +37,7 @@ class PerkController {
   uploadFiles = upload.fields([
     { name: 'mainImage', maxCount: 1 },
     { name: 'vendorLogo', maxCount: 1 },
-    { name: 'gallery', maxCount: 8 }
+    { name: 'gallery', maxCount: 5 }
   ]);
 
   // Create new perk (Admin/Client)
@@ -182,6 +182,18 @@ class PerkController {
     });
   });
 
+  getPerkByIdPublic = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const { includeRelations = false } = req.query;
+
+    const perk = await perkService.getPerkByIdPublic(id, includeRelations === 'true');
+
+    res.status(200).json({
+      success: true,
+      data: perk
+    });
+  });
+
   // Get perk by slug (Public)
   getPerkBySlug = catchAsync(async (req, res) => {
     const { slug } = req.params;
@@ -285,7 +297,7 @@ class PerkController {
   // Delete perk (Admin/Client)
   deletePerk = catchAsync(async (req, res) => {
     const { id } = req.params;
-    
+
     await perkService.deletePerk(id, req.user.id);
 
     res.status(200).json({
@@ -385,7 +397,7 @@ class PerkController {
   // Get perk statistics (Admin)
   getPerkStats = catchAsync(async (req, res) => {
     const { dateFrom, dateTo } = req.query;
-    
+
     const dateRange = {};
     if (dateFrom) dateRange.start = dateFrom;
     if (dateTo) dateRange.end = dateTo;
