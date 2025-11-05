@@ -80,11 +80,11 @@ class PerkService {
       const thumbnailResult = uploadService.generateThumbnail(publicId, 300, 300);
 
       // Delete temp file
-      if (imageFile.path) {
-        fs.unlink(imageFile.path, (err) => {
-          if (err) console.error('Failed to delete temp file:', err);
-        });
-      }
+      // if (imageFile.path) {
+      //   fs.unlink(imageFile.path, (err) => {
+      //     if (err) console.error('Failed to delete temp file:', err);
+      //   });
+      // }
 
       return {
         url,
