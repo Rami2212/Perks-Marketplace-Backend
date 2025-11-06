@@ -1,3 +1,5 @@
+// server.js
+
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -21,6 +23,8 @@ const authRoutes = require('./routes/auth');
 const categoryRoutes = require('./routes/categories');
 const leadRoutes = require('./routes/leads');
 const perkRoutes = require('./routes/perks');
+const blogCategoryRoutes = require('./routes/blogCategories');
+const blogRoutes = require('./routes/blog');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -70,6 +74,8 @@ app.use(`/api/${apiVersion}/auth`, authRoutes);
 app.use(`/api/${apiVersion}/categories`, categoryRoutes);
 app.use(`/api/${apiVersion}/leads`, leadRoutes);
 app.use(`/api/${apiVersion}/perks`, perkRoutes);
+app.use(`/api/${apiVersion}/blog-categories`, blogCategoryRoutes);
+app.use(`/api/${apiVersion}/blog`, blogRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -86,6 +92,18 @@ app.get('/health', async (req, res) => {
       console.error('Cloudinary health check failed:', err);
     }
 
+    // Check Blog models
+let blogHealthy = false;
+try {
+  const BlogPost = require('./models/BlogPost');
+  const BlogCategory = require('./models/BlogCategory');
+  await BlogPost.countDocuments().limit(1);
+  await BlogCategory.countDocuments().limit(1);
+  blogHealthy = true;
+} catch (err) {
+  console.error('Blog models health check failed:', err);
+}
+
     res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
@@ -93,7 +111,8 @@ app.get('/health', async (req, res) => {
       environment: process.env.NODE_ENV,
       version: process.env.npm_package_version || '1.0.0',
       database: dbHealthy ? 'connected' : 'disconnected',
-      cloudinary: cloudinaryHealthy ? 'connected' : 'disconnected'
+      cloudinary: cloudinaryHealthy ? 'connected' : 'disconnected',
+      blogModels: blogHealthy ? 'initialized' : 'failed'
     });
   } catch (error) {
     res.status(503).json({
@@ -115,6 +134,8 @@ app.get(`/api/${apiVersion}`, (req, res) => {
       categories: `/api/${apiVersion}/categories`,
       leads: `/api/${apiVersion}/leads`,
       perks: `/api/${apiVersion}/perks`,
+      blogCategories: `/api/${apiVersion}/blog-categories`,
+      blog: `/api/${apiVersion}/blog`,
       health: '/health'
     },
     documentation: `${req.protocol}://${req.get('host')}/docs`,
@@ -174,6 +195,23 @@ const server = app.listen(PORT, () => {
     console.log(`     GET  /api/${apiVersion}/perks/my-perks (auth required)`);
     console.log(`     PUT  /api/${apiVersion}/perks/:id/seo (auth required)`);
     console.log(`     DELETE /api/${apiVersion}/perks/:id (auth required)`);
+    console.log(`   BLOG CATEGORIES:`);
+console.log(`     GET  /api/${apiVersion}/blog-categories/public`);
+console.log(`     GET  /api/${apiVersion}/blog-categories/menu`);
+console.log(`     GET  /api/${apiVersion}/blog-categories/featured`);
+console.log(`     POST /api/${apiVersion}/blog-categories (auth required)`);
+console.log(`     PUT  /api/${apiVersion}/blog-categories/:id (auth required)`);
+console.log(`     DELETE /api/${apiVersion}/blog-categories/:id (auth required)`);
+console.log(`   BLOG POSTS:`);
+console.log(`     GET  /api/${apiVersion}/blog`);
+console.log(`     GET  /api/${apiVersion}/blog/slug/:slug`);
+console.log(`     GET  /api/${apiVersion}/blog/category/:categoryId`);
+console.log(`     POST /api/${apiVersion}/blog/:id/share`);
+console.log(`     POST /api/${apiVersion}/blog/:id/click`);
+console.log(`     GET  /api/${apiVersion}/blog/admin/all (auth required)`);
+console.log(`     POST /api/${apiVersion}/blog/admin (auth required)`);
+console.log(`     PUT  /api/${apiVersion}/blog/admin/:id (auth required)`);
+console.log(`     DELETE /api/${apiVersion}/blog/admin/:id (auth required)`);
     console.log(`   LEADS:`);
     console.log(`     POST /api/${apiVersion}/leads/submit`);
     console.log(`     GET  /api/${apiVersion}/leads (auth required)`);
