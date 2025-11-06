@@ -124,6 +124,12 @@ const slugValidation = [
 // Get active perks
 router.get('/', perkController.getActivePerks);
 
+// Get perk by ID
+router.get('/:id', 
+  mongoIdValidation,
+  perkController.getPerkByIdPublic
+);
+
 // Get featured perks
 router.get('/featured', perkController.getFeaturedPerks);
 
@@ -156,14 +162,7 @@ router.post('/:id/click',
 router.use(authMiddleware.authenticate);
 
 // Get client's own perks
-router.get('/my-perks', perkController.getClientPerks);
-
-// Update perk SEO (Client can edit SEO for their own perks)
-router.put('/:id/seo',
-  mongoIdValidation,
-  updateSEOValidation,
-  perkController.updatePerkSEO
-);
+//router.get('/my-perks', perkController.getClientPerks);
 
 // ADMIN ROUTES (Admin only)
 router.use(authMiddleware.adminOnly);
@@ -200,6 +199,13 @@ router.put('/admin/:id',
   perkController.uploadFiles,
   createPerkValidation,
   perkController.updatePerk
+);
+
+// Update perk SEO (Client can edit SEO for their own perks)
+router.put('/:id/seo',
+  mongoIdValidation,
+  updateSEOValidation,
+  perkController.updatePerkSEO
 );
 
 // Delete perk (Admin)
