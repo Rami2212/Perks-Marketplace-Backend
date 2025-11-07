@@ -114,6 +114,24 @@ class PerkService {
     }
   }
 
+  // Get perk by ID (Public)
+  async getPerkByIdPublic(id, includeRelations = false) {
+    try {
+      const perk = await perkRepository.findById(id, includeRelations);
+      if (!perk) {
+        throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
+      }
+      // Only return if perk is active and visible for public access
+      if (perk.status !== 'active' || !perk.isVisible) {
+        throw new AppError('Perk not found', 404, 'PERK_NOT_FOUND');
+      }
+      return perk;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError('Failed to get perk by ID', 500, 'GET_PERK_ERROR');
+    }
+  }
+
   // Get perk by slug (Public)
   async getPerkBySlug(slug, includeRelations = false) {
     try {

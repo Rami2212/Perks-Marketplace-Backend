@@ -1,3 +1,5 @@
+// server.js
+
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -21,6 +23,8 @@ const authRoutes = require('./routes/auth');
 const categoryRoutes = require('./routes/categories');
 const leadRoutes = require('./routes/leads');
 const perkRoutes = require('./routes/perks');
+const blogCategoryRoutes = require('./routes/blogCategories');
+const blogRoutes = require('./routes/blog');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,18 +68,34 @@ app.use(rateLimitMiddleware.globalLimiter);
 // NOTE: You can remove this if you're fully migrated to Cloudinary
 // app.use('/uploads', express.static('uploads'));
 
+// Ensure DB is connected before processing requests
+app.use(async (req, res, next) => {
+  try {
+    if (!(await database.isHealthy())) {
+      console.log('Waiting for MongoDB connection...');
+      await database.connect();
+    }
+    next();
+  } catch (err) {
+    console.error('Request blocked — database unavailable:', err.message);
+    res.status(503).json({ message: 'Database temporarily unavailable, please try again.' });
+  }
+});
+
 // API routes
 const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
 app.use(`/api/${apiVersion}/categories`, categoryRoutes);
 app.use(`/api/${apiVersion}/leads`, leadRoutes);
 app.use(`/api/${apiVersion}/perks`, perkRoutes);
+app.use(`/api/${apiVersion}/blog-categories`, blogCategoryRoutes);
+app.use(`/api/${apiVersion}/blog`, blogRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
     const dbHealthy = await database.isHealthy();
-    
+
     // Optional: Check Cloudinary connectivity
     let cloudinaryHealthy = false;
     try {
@@ -86,6 +106,18 @@ app.get('/health', async (req, res) => {
       console.error('Cloudinary health check failed:', err);
     }
 
+    // Check Blog models
+    let blogHealthy = false;
+    try {
+      const BlogPost = require('./models/BlogPost');
+      const BlogCategory = require('./models/BlogCategory');
+      await BlogPost.countDocuments().limit(1);
+      await BlogCategory.countDocuments().limit(1);
+      blogHealthy = true;
+    } catch (err) {
+      console.error('Blog models health check failed:', err);
+    }
+
     res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
@@ -93,7 +125,8 @@ app.get('/health', async (req, res) => {
       environment: process.env.NODE_ENV,
       version: process.env.npm_package_version || '1.0.0',
       database: dbHealthy ? 'connected' : 'disconnected',
-      cloudinary: cloudinaryHealthy ? 'connected' : 'disconnected'
+      cloudinary: cloudinaryHealthy ? 'connected' : 'disconnected',
+      blogModels: blogHealthy ? 'initialized' : 'failed'
     });
   } catch (error) {
     res.status(503).json({
@@ -115,6 +148,8 @@ app.get(`/api/${apiVersion}`, (req, res) => {
       categories: `/api/${apiVersion}/categories`,
       leads: `/api/${apiVersion}/leads`,
       perks: `/api/${apiVersion}/perks`,
+      blogCategories: `/api/${apiVersion}/blog-categories`,
+      blog: `/api/${apiVersion}/blog`,
       health: '/health'
     },
     documentation: `${req.protocol}://${req.get('host')}/docs`,
@@ -155,32 +190,6 @@ const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
   console.log(`API Base URL: http://localhost:${PORT}/api/${apiVersion}`);
-  console.log(`Health Check: http://localhost:${PORT}/health`);
-  
-  if (process.env.NODE_ENV === 'dev') {
-    console.log(`\nAvailable endpoints:`);
-    console.log(`   AUTH:`);
-    console.log(`     POST /api/${apiVersion}/auth/login`);
-    console.log(`     POST /api/${apiVersion}/auth/register`);
-    console.log(`     GET  /api/${apiVersion}/auth/me`);
-    console.log(`   CATEGORIES:`);
-    console.log(`     GET  /api/${apiVersion}/categories/tree`);
-    console.log(`     POST /api/${apiVersion}/categories (auth required)`);
-    console.log(`     PUT  /api/${apiVersion}/categories/:id (auth required)`);
-    console.log(`     DELETE /api/${apiVersion}/categories/:id (auth required)`);
-    console.log(`   PERKS:`);
-    console.log(`     GET  /api/${apiVersion}/perks/category/:categorySlug`);
-    console.log(`     POST /api/${apiVersion}/perks/:id/click`);
-    console.log(`     GET  /api/${apiVersion}/perks/my-perks (auth required)`);
-    console.log(`     PUT  /api/${apiVersion}/perks/:id/seo (auth required)`);
-    console.log(`     DELETE /api/${apiVersion}/perks/:id (auth required)`);
-    console.log(`   LEADS:`);
-    console.log(`     POST /api/${apiVersion}/leads/submit`);
-    console.log(`     GET  /api/${apiVersion}/leads (auth required)`);
-    console.log(`     GET  /api/${apiVersion}/leads/stats (auth required)`);
-    console.log(`   HEALTH:`);
-    console.log(`     GET  /health`);
-  }
 });
 
 // Handle server errors
