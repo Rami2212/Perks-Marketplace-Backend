@@ -68,6 +68,20 @@ app.use(rateLimitMiddleware.globalLimiter);
 // NOTE: You can remove this if you're fully migrated to Cloudinary
 // app.use('/uploads', express.static('uploads'));
 
+// Ensure DB is connected before processing requests
+app.use(async (req, res, next) => {
+  try {
+    if (!(await database.isHealthy())) {
+      console.log('Waiting for MongoDB connection...');
+      await database.connect();
+    }
+    next();
+  } catch (err) {
+    console.error('Request blocked — database unavailable:', err.message);
+    res.status(503).json({ message: 'Database temporarily unavailable, please try again.' });
+  }
+});
+
 // API routes
 const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
@@ -81,7 +95,7 @@ app.use(`/api/${apiVersion}/blog`, blogRoutes);
 app.get('/health', async (req, res) => {
   try {
     const dbHealthy = await database.isHealthy();
-    
+
     // Optional: Check Cloudinary connectivity
     let cloudinaryHealthy = false;
     try {
@@ -93,16 +107,16 @@ app.get('/health', async (req, res) => {
     }
 
     // Check Blog models
-let blogHealthy = false;
-try {
-  const BlogPost = require('./models/BlogPost');
-  const BlogCategory = require('./models/BlogCategory');
-  await BlogPost.countDocuments().limit(1);
-  await BlogCategory.countDocuments().limit(1);
-  blogHealthy = true;
-} catch (err) {
-  console.error('Blog models health check failed:', err);
-}
+    let blogHealthy = false;
+    try {
+      const BlogPost = require('./models/BlogPost');
+      const BlogCategory = require('./models/BlogCategory');
+      await BlogPost.countDocuments().limit(1);
+      await BlogCategory.countDocuments().limit(1);
+      blogHealthy = true;
+    } catch (err) {
+      console.error('Blog models health check failed:', err);
+    }
 
     res.status(200).json({
       status: 'OK',
@@ -176,49 +190,6 @@ const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
   console.log(`API Base URL: http://localhost:${PORT}/api/${apiVersion}`);
-  console.log(`Health Check: http://localhost:${PORT}/health`);
-  
-  if (process.env.NODE_ENV === 'dev') {
-    console.log(`\nAvailable endpoints:`);
-    console.log(`   AUTH:`);
-    console.log(`     POST /api/${apiVersion}/auth/login`);
-    console.log(`     POST /api/${apiVersion}/auth/register`);
-    console.log(`     GET  /api/${apiVersion}/auth/me`);
-    console.log(`   CATEGORIES:`);
-    console.log(`     GET  /api/${apiVersion}/categories/tree`);
-    console.log(`     POST /api/${apiVersion}/categories (auth required)`);
-    console.log(`     PUT  /api/${apiVersion}/categories/:id (auth required)`);
-    console.log(`     DELETE /api/${apiVersion}/categories/:id (auth required)`);
-    console.log(`   PERKS:`);
-    console.log(`     GET  /api/${apiVersion}/perks/category/:categorySlug`);
-    console.log(`     POST /api/${apiVersion}/perks/:id/click`);
-    console.log(`     GET  /api/${apiVersion}/perks/my-perks (auth required)`);
-    console.log(`     PUT  /api/${apiVersion}/perks/:id/seo (auth required)`);
-    console.log(`     DELETE /api/${apiVersion}/perks/:id (auth required)`);
-    console.log(`   BLOG CATEGORIES:`);
-console.log(`     GET  /api/${apiVersion}/blog-categories/public`);
-console.log(`     GET  /api/${apiVersion}/blog-categories/menu`);
-console.log(`     GET  /api/${apiVersion}/blog-categories/featured`);
-console.log(`     POST /api/${apiVersion}/blog-categories (auth required)`);
-console.log(`     PUT  /api/${apiVersion}/blog-categories/:id (auth required)`);
-console.log(`     DELETE /api/${apiVersion}/blog-categories/:id (auth required)`);
-console.log(`   BLOG POSTS:`);
-console.log(`     GET  /api/${apiVersion}/blog`);
-console.log(`     GET  /api/${apiVersion}/blog/slug/:slug`);
-console.log(`     GET  /api/${apiVersion}/blog/category/:categoryId`);
-console.log(`     POST /api/${apiVersion}/blog/:id/share`);
-console.log(`     POST /api/${apiVersion}/blog/:id/click`);
-console.log(`     GET  /api/${apiVersion}/blog/admin/all (auth required)`);
-console.log(`     POST /api/${apiVersion}/blog/admin (auth required)`);
-console.log(`     PUT  /api/${apiVersion}/blog/admin/:id (auth required)`);
-console.log(`     DELETE /api/${apiVersion}/blog/admin/:id (auth required)`);
-    console.log(`   LEADS:`);
-    console.log(`     POST /api/${apiVersion}/leads/submit`);
-    console.log(`     GET  /api/${apiVersion}/leads (auth required)`);
-    console.log(`     GET  /api/${apiVersion}/leads/stats (auth required)`);
-    console.log(`   HEALTH:`);
-    console.log(`     GET  /health`);
-  }
 });
 
 // Handle server errors
