@@ -137,6 +137,9 @@ class AnalyticsService {
         
         case 'USER_LOGIN':
           return await this.trackUserLogin(data, clientId, userId);
+
+        case 'BLOG_POST_VIEW':
+          return await this.trackBlogPostView(data, clientId, userId);
         
         default:
           // Generic custom event
@@ -261,6 +264,15 @@ class AnalyticsService {
     return await this.sendEvent('login', {
       method: data.method || 'email',
       user_type: data.userType || 'client'
+    }, clientId, userId);
+  }
+
+  async trackBlogPostView(data, clientId, userId) {
+    return await this.sendEvent('view_blog_post', {
+      post_id: data.postId,
+      post_title: data.title,
+      post_category: data.category,
+      post_date: data.date
     }, clientId, userId);
   }
 

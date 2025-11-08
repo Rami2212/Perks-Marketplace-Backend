@@ -442,6 +442,18 @@ class PerkRepository {
     }
   }
 
+  // Get recent perks
+  async getRecentPerks(days = 7, limit = 20) {
+    try {
+      const dateFrom = new Date();
+      dateFrom.setDate(dateFrom.getDate() - days);
+
+      return await this.findAll({ dateFrom }, 1, limit, true);
+    } catch (error) {
+      throw new AppError('Database error while getting recent perks', 500, 'DATABASE_ERROR');
+    }
+  }
+
   // Check if slug exists
   async slugExists(slug, excludeId = null) {
     try {
