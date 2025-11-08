@@ -33,7 +33,7 @@ const registerValidation = [
     .withMessage('Password must be at least 8 characters with uppercase, lowercase, number and special character'),
   body('role')
     .optional()
-    .isIn(['super_admin', 'content_editor'])
+    .isIn(['super_admin', 'content_editor', 'user'])
     .withMessage('Invalid role')
 ];
 
