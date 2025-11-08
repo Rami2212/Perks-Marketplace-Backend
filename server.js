@@ -70,7 +70,7 @@ app.set('trust proxy', 1);
 app.use(rateLimitMiddleware.globalLimiter);
 
 // Analytics middleware
-app.use(analyticsMiddleware);
+//app.use(analyticsMiddleware);
 
 // SEO middleware
 app.use(seoMiddleware());
