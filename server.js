@@ -73,7 +73,7 @@ app.use(rateLimitMiddleware.globalLimiter);
 //app.use(analyticsMiddleware);
 
 // SEO middleware
-app.use(seoMiddleware());
+//app.use(seoMiddleware());
 
 app.use(async (req, res, next) => {
   try {
