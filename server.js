@@ -26,6 +26,7 @@ const leadRoutes = require('./routes/leads');
 const perkRoutes = require('./routes/perks');
 const blogCategoryRoutes = require('./routes/blogCategories');
 const blogRoutes = require('./routes/blog');
+const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -90,6 +91,7 @@ app.use(`/api/${apiVersion}/leads`, leadRoutes);
 app.use(`/api/${apiVersion}/perks`, perkRoutes);
 app.use(`/api/${apiVersion}/blog-categories`, blogCategoryRoutes);
 app.use(`/api/${apiVersion}/blog`, blogRoutes);
+app.use(`/api/${apiVersion}/dashboard`, dashboardRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -150,6 +152,7 @@ app.get(`/api/${apiVersion}`, (req, res) => {
       perks: `/api/${apiVersion}/perks`,
       blogCategories: `/api/${apiVersion}/blog-categories`,
       blog: `/api/${apiVersion}/blog`,
+      dashboard: `/api/${apiVersion}/dashboard`,
       health: '/health'
     },
     documentation: `${req.protocol}://${req.get('host')}/docs`,
