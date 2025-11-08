@@ -45,11 +45,8 @@ database.connect().catch((error) => {
 // Security middleware
 app.use(helmet(appConfig.getSecurityConfig().helmet));
 
-// CRITICAL: Handle OPTIONS requests FIRST
-app.options('*', cors());
-
-// CORS configuration - Use the corsMiddleware
-app.use(corsMiddleware.getCorsMiddleware('main'));
+// CORS configuration
+app.use(corsMiddleware.getCorsMiddleware());
 
 // General middleware
 app.use(compression());
