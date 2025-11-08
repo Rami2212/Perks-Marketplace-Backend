@@ -69,7 +69,7 @@ class CategoryService {
         throw new AppError('Failed to upload image', 500, 'UPLOAD_FAILED');
       }
 
-      const {url, publicId, format, width, height, size, uploadedAt} = uploadResult.data;
+      const { url, publicId, format, width, height, size, uploadedAt } = uploadResult.data;
 
       // Generate thumbnail
       const thumbnailResult = uploadService.generateThumbnail(publicId, 300, 300);
@@ -294,16 +294,54 @@ class CategoryService {
   }
 
   // Search categories
-  async searchCategories(query, options = {}) {
+  async searchCategories(query, options = {}, clientId = null, userId = null) {
     try {
       if (!query || query.trim().length < 2) {
         throw new AppError('Search query must be at least 2 characters', 400, 'INVALID_SEARCH_QUERY');
       }
 
-      return await categoryRepository.search(query.trim(), options);
+      const result = await categoryRepository.search(query.trim(), options);
+
+      // Track search event
+      if (analyticsService.isConfigured()) {
+        await analyticsService.trackEvent('SEARCH_PERFORMED', {
+          query: query.trim(),
+          resultsCount: result.total || 0,
+          type: 'categories'
+        }, {
+          clientId,
+          userId
+        });
+      }
+
+      return result;
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError('Failed to search categories', 500, 'SEARCH_CATEGORIES_ERROR');
+    }
+  }
+
+  // Track category view
+  async trackCategoryView(categoryId, clientId = null, userId = null) {
+    try {
+      const category = await categoryRepository.findById(categoryId);
+
+      if (category && analyticsService.isConfigured()) {
+        await analyticsService.trackEvent('CATEGORY_VIEW', {
+          categoryId,
+          categoryName: category.name,
+          level: category.level,
+          perkCount: category.perkCount || 0
+        }, {
+          clientId,
+          userId
+        });
+      }
+
+      return category;
+    } catch (error) {
+      console.warn('Failed to track category view:', categoryId, error.message);
+      return null;
     }
   }
 
@@ -329,7 +367,7 @@ class CategoryService {
   async validateSlug(slug, excludeId = null) {
     try {
       const exists = await categoryRepository.slugExists(slug, excludeId);
-      return {isValid: !exists, exists};
+      return { isValid: !exists, exists };
     } catch (error) {
       throw new AppError('Failed to validate slug', 500, 'VALIDATE_SLUG_ERROR');
     }
@@ -376,7 +414,7 @@ class CategoryService {
       if (!category) {
         throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
       }
-      const updatedCategory = await categoryRepository.update(id, {status, updatedBy: userId});
+      const updatedCategory = await categoryRepository.update(id, { status, updatedBy: userId });
       return await categoryRepository.findById(updatedCategory._id, true);
     } catch (error) {
       if (error instanceof AppError) throw error;

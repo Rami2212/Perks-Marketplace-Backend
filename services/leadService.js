@@ -10,23 +10,23 @@ class LeadService {
     try {
       // Extract request information
       const { ipAddress, userAgent, referrer, utmParams } = requestInfo;
-      
+
       // Check for existing lead with same email and perk
       if (leadData.perkId) {
         const existingLead = await leadRepository.findByEmailAndPerk(
-          leadData.email, 
+          leadData.email,
           leadData.perkId
         );
-        
+
         if (existingLead) {
           throw new AppError(
-            'A lead has already been submitted for this perk with this email address', 
-            409, 
+            'A lead has already been submitted for this perk with this email address',
+            409,
             'DUPLICATE_SUBMISSION'
           );
         }
       }
-      
+
       // Enrich lead data with tracking information
       const enrichedLeadData = {
         ...leadData,
@@ -41,23 +41,28 @@ class LeadService {
         dataProcessingConsent: true,
         consentDate: new Date()
       };
-      
+
       // Create lead
       const lead = await leadRepository.create(enrichedLeadData);
-      
+
       // Send notification emails
       await this.sendLeadNotifications(lead);
-      
+
       // Track analytics event
-      if (analyticsService) {
+      if (analyticsService.isConfigured()) {
         await analyticsService.trackEvent('LEAD_SUBMISSION', {
-          leadId: lead._id,
-          perkId: lead.perkId,
+          leadId: lead._id.toString(),
+          perkId: lead.perkId?.toString(),
+          categoryId: lead.categoryId?.toString(),
           source: lead.source,
-          score: lead.leadScore
+          score: lead.leadScore,
+          value: lead.leadScore || 0
+        }, {
+          clientId,
+          userId: lead._id.toString()
         });
       }
-      
+
       return await leadRepository.findById(lead._id, true);
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -69,11 +74,11 @@ class LeadService {
   async getLeadById(id) {
     try {
       const lead = await leadRepository.findById(id, true);
-      
+
       if (!lead) {
         throw new AppError('Lead not found', 404, 'LEAD_NOT_FOUND');
       }
-      
+
       return lead;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -139,17 +144,19 @@ class LeadService {
       updateData.updatedBy = userId;
 
       const updatedLead = await leadRepository.update(id, updateData);
-      
+
       // Track analytics event for status changes
-      if (updateData.status && updateData.status !== lead.status) {
-        if (analyticsService) {
-          await analyticsService.trackEvent('LEAD_STATUS_CHANGE', {
-            leadId: id,
-            oldStatus: lead.status,
-            newStatus: updateData.status,
-            updatedBy: userId
-          });
-        }
+      // Track analytics event
+      if (analyticsService.isConfigured()) {
+        await analyticsService.trackEvent('LEAD_STATUS_CHANGE', {
+          leadId: id,
+          oldStatus,
+          newStatus: status,
+          updatedBy: userId
+        }, {
+          clientId,
+          userId: userId
+        });
       }
 
       return await leadRepository.findById(updatedLead._id, true);
@@ -168,7 +175,7 @@ class LeadService {
       }
 
       await leadRepository.delete(id);
-      
+
       return { message: 'Lead deleted successfully' };
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -192,27 +199,30 @@ class LeadService {
   }
 
   // Assign lead to user
-  async assignLead(id, assigneeId, assignedBy) {
+  async assignLead(id, assigneeId, assignedBy, clientId = null) {
     try {
       const lead = await leadRepository.assignLead(id, assigneeId);
-      
+
       // Update the assignedBy field
       await leadRepository.update(id, { updatedBy: assignedBy });
-      
+
       // Send assignment notification
       if (emailService.isConfigured()) {
         await this.sendAssignmentNotification(lead, assigneeId);
       }
-      
+
       // Track analytics event
-      if (analyticsService) {
+      if (analyticsService.isConfigured()) {
         await analyticsService.trackEvent('LEAD_ASSIGNED', {
           leadId: id,
           assignedTo: assigneeId,
           assignedBy: assignedBy
+        }, {
+          clientId,
+          userId: assignedBy
         });
       }
-      
+
       return lead;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -221,16 +231,32 @@ class LeadService {
   }
 
   // Update lead status
-  async updateLeadStatus(id, status, userId) {
+  async updateLeadStatus(id, status, userId, clientId = null) {
     try {
-      const lead = await leadRepository.updateStatus(id, status, userId);
-      
+      const lead = await leadRepository.findById(id);
+      const oldStatus = lead.status;
+
+      const updatedLead = await leadRepository.updateStatus(id, status, userId);
+
       // Send status change notifications
       if (status === LEAD_STATUSES.CONVERTED) {
-        await this.sendConversionNotification(lead);
+        await this.sendConversionNotification(updatedLead);
       }
-      
-      return lead;
+
+      // Track analytics event
+      if (analyticsService.isConfigured()) {
+        await analyticsService.trackEvent('LEAD_STATUS_CHANGE', {
+          leadId: id,
+          oldStatus,
+          newStatus: status,
+          updatedBy: userId
+        }, {
+          clientId,
+          userId: userId
+        });
+      }
+
+      return updatedLead;
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError('Failed to update lead status', 500, 'UPDATE_STATUS_ERROR');
@@ -241,7 +267,7 @@ class LeadService {
   async scheduleFollowUp(id, followUpDate, userId, notes) {
     try {
       const lead = await leadRepository.scheduleFollowUp(id, followUpDate, userId);
-      
+
       // Add note about follow-up if provided
       if (notes) {
         await leadRepository.addNote(id, {
@@ -250,7 +276,7 @@ class LeadService {
           type: 'follow-up'
         });
       }
-      
+
       return lead;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -259,19 +285,22 @@ class LeadService {
   }
 
   // Record contact attempt
-  async recordContactAttempt(id, userId, notes, contactMethod = 'email') {
+  async recordContactAttempt(id, userId, notes, contactMethod = 'email', clientId = null) {
     try {
       const lead = await leadRepository.recordContactAttempt(id, userId, notes);
-      
+
       // Track analytics event
-      if (analyticsService) {
+      if (analyticsService.isConfigured()) {
         await analyticsService.trackEvent('LEAD_CONTACT_ATTEMPT', {
           leadId: id,
           contactMethod,
           userId
+        }, {
+          clientId,
+          userId
         });
       }
-      
+
       return lead;
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -393,7 +422,7 @@ class LeadService {
   }
 
   // Convert lead
-  async convertLead(id, conversionData, userId) {
+  async convertLead(id, conversionData, userId, clientId = null) {
     try {
       const updateData = {
         status: LEAD_STATUSES.CONVERTED,
@@ -404,7 +433,7 @@ class LeadService {
       };
 
       const lead = await leadRepository.update(id, updateData);
-      
+
       // Add conversion note
       if (conversionData.notes) {
         await leadRepository.addNote(id, {
@@ -413,20 +442,24 @@ class LeadService {
           type: 'general'
         });
       }
-      
+
       // Send conversion notification
       await this.sendConversionNotification(lead);
-      
+
       // Track analytics event
-      if (analyticsService) {
+      if (analyticsService.isConfigured()) {
         await analyticsService.trackEvent('LEAD_CONVERTED', {
           leadId: id,
-          conversionValue: conversionData.value,
+          conversionValue: conversionData.value || 0,
           conversionType: conversionData.type,
-          convertedBy: userId
+          convertedBy: userId,
+          value: conversionData.value || 0
+        }, {
+          clientId,
+          userId: userId
         });
       }
-      
+
       return await leadRepository.findById(id, true);
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -441,7 +474,7 @@ class LeadService {
 
       // Send to admin/sales team
       await emailService.sendLeadNotification(lead);
-      
+
       // Send confirmation to lead (if they opted in)
       if (lead.marketingOptIn) {
         await emailService.sendLeadConfirmation(lead);
@@ -456,7 +489,7 @@ class LeadService {
   async sendAssignmentNotification(lead, assigneeId) {
     try {
       if (!emailService.isConfigured()) return;
-      
+
       // Get assignee details and send notification
       // Implementation depends on your email service structure
       console.log(`Lead ${lead._id} assigned to user ${assigneeId}`);
@@ -469,7 +502,7 @@ class LeadService {
   async sendConversionNotification(lead) {
     try {
       if (!emailService.isConfigured()) return;
-      
+
       // Send to admin/sales team about conversion
       console.log(`Lead ${lead._id} converted`);
     } catch (error) {

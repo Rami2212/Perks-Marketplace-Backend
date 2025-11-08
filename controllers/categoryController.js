@@ -326,6 +326,18 @@ class CategoryController {
     });
   });
 
+  // Track category view
+  trackCategoryView = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    await categoryService.trackCategoryView(id, req.user.clientId, req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Category view tracked successfully'
+    });
+  });
+
   // Get menu categories
   getMenuCategories = catchAsync(async (req, res) => {
     const categories = await categoryService.getMenuCategories();
