@@ -45,8 +45,11 @@ database.connect().catch((error) => {
 // Security middleware
 app.use(helmet(appConfig.getSecurityConfig().helmet));
 
-// CORS configuration
-app.use(corsMiddleware.getCorsMiddleware());
+// CRITICAL: Handle OPTIONS requests FIRST
+app.options('*', cors());
+
+// CORS configuration - Use the corsMiddleware
+app.use(corsMiddleware.getCorsMiddleware('main'));
 
 // General middleware
 app.use(compression());
@@ -70,10 +73,10 @@ app.set('trust proxy', 1);
 app.use(rateLimitMiddleware.globalLimiter);
 
 // Analytics middleware
-//app.use(analyticsMiddleware);
+app.use(analyticsMiddleware);
 
 // SEO middleware
-//app.use(seoMiddleware());
+app.use(seoMiddleware());
 
 app.use(async (req, res, next) => {
   try {

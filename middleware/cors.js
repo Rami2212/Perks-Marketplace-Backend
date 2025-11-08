@@ -98,7 +98,7 @@ class CorsMiddleware {
     ];
   }
 
-  // Origin validator function
+  // UPDATED: Origin validator function with Vercel support
   originValidator = (allowedOrigins) => {
     return (origin, callback) => {
       // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -109,6 +109,14 @@ class CorsMiddleware {
       // Development mode - allow all localhost origins
       if (this.isDevelopment && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
         return callback(null, true);
+      }
+
+      // Allow Vercel preview deployments (for testing)
+      if (origin.includes('vercel.app')) {
+        // Only allow if it matches your project name
+        if (origin.includes('perks-marketplace-frontend')) {
+          return callback(null, true);
+        }
       }
 
       // Check against allowed origins
