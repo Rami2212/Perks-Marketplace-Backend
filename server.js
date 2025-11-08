@@ -70,10 +70,10 @@ app.set('trust proxy', 1);
 app.use(rateLimitMiddleware.globalLimiter);
 
 // Analytics middleware
-app.use(analyticsMiddleware);
+//app.use(analyticsMiddleware);
 
 // SEO middleware
-app.use(seoMiddleware());
+//app.use(seoMiddleware());
 
 app.use(async (req, res, next) => {
   try {
@@ -87,18 +87,6 @@ app.use(async (req, res, next) => {
     res.status(503).json({ message: 'Database temporarily unavailable, please try again.' });
   }
 });
-
-// API routes
-const apiVersion = process.env.API_VERSION || 'v1';
-app.use(`/api/${apiVersion}/auth`, authRoutes);
-app.use(`/api/${apiVersion}/categories`, categoryRoutes);
-app.use(`/api/${apiVersion}/leads`, leadRoutes);
-app.use(`/api/${apiVersion}/perks`, perkRoutes);
-app.use(`/api/${apiVersion}/blog-categories`, blogCategoryRoutes);
-app.use(`/api/${apiVersion}/blog`, blogRoutes);
-app.use(`/api/${apiVersion}/dashboard`, dashboardRoutes);
-app.use(`/api/${apiVersion}/seo`, seoRoutes);
-app.use('/', seoRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -145,6 +133,18 @@ app.get('/health', async (req, res) => {
     });
   }
 });
+
+// API routes
+const apiVersion = process.env.API_VERSION || 'v1';
+app.use(`/api/${apiVersion}/auth`, authRoutes);
+app.use(`/api/${apiVersion}/categories`, categoryRoutes);
+app.use(`/api/${apiVersion}/leads`, leadRoutes);
+app.use(`/api/${apiVersion}/perks`, perkRoutes);
+app.use(`/api/${apiVersion}/blog-categories`, blogCategoryRoutes);
+app.use(`/api/${apiVersion}/blog`, blogRoutes);
+app.use(`/api/${apiVersion}/dashboard`, dashboardRoutes);
+app.use(`/api/${apiVersion}/seo`, seoRoutes);
+app.use('/', seoRoutes);
 
 // API info endpoint
 app.get(`/api/${apiVersion}`, (req, res) => {
