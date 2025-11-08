@@ -38,6 +38,20 @@ const createCategoryValidation = [
     .optional()
     .isBoolean()
     .withMessage('isFeatured must be a boolean')
+  ,body('seoTitle')
+    .optional()
+    .trim()
+    .isLength({ max: 60 })
+    .withMessage('SEO title cannot be more than 60 characters'),
+  body('seoDescription')
+    .optional()
+    .trim()
+    .isLength({ max: 160 })
+    .withMessage('SEO description cannot be more than 160 characters'),
+  body('seoKeywords')
+    .optional()
+    .isArray()
+    .withMessage('SEO keywords must be an array of strings')
 ];
 
 const generateSlugValidation = [
@@ -122,6 +136,16 @@ router.post('/generate-slug',
 router.post('/:id/update-counters', 
   mongoIdValidation,
   categoryController.updateCategoryCounters
+);
+
+// Update category status
+router.post('/:id/update-status',
+  mongoIdValidation,
+    body('status')
+      .notEmpty()
+      .isIn(['active', 'inactive', 'draft'])
+      .withMessage('Invalid status'),
+    categoryController.updateCategoryStatus
 );
 
 module.exports = router;

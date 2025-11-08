@@ -427,6 +427,31 @@ class CategoryController {
       message: 'Category counters updated successfully'
     });
   });
+
+  // Update category status
+  updateCategoryStatus = catchAsync(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input data',
+          details: errors.array()
+        }
+      });
+    }
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const updatedCategory = await categoryService.updateCategoryStatus(id, status);
+
+    res.status(200).json({
+      success: true,
+      data: updatedCategory,
+      message: 'Category status updated successfully'
+    });
+  });
 }
 
 module.exports = new CategoryController();

@@ -61,7 +61,7 @@ class CategoryService {
       if (!validation.valid) {
         throw new AppError(`Image validation failed: ${validation.errors.join(', ')}`, 400, 'INVALID_IMAGE');
       }
-      
+
       // Upload original image
       const uploadResult = await uploadService.processSingleUpload(imageFile, 'categories', 'medium');
 
@@ -69,7 +69,7 @@ class CategoryService {
         throw new AppError('Failed to upload image', 500, 'UPLOAD_FAILED');
       }
 
-      const { url, publicId, format, width, height, size, uploadedAt } = uploadResult.data;
+      const {url, publicId, format, width, height, size, uploadedAt} = uploadResult.data;
 
       // Generate thumbnail
       const thumbnailResult = uploadService.generateThumbnail(publicId, 300, 300);
@@ -92,7 +92,7 @@ class CategoryService {
         uploadedAt: new Date(uploadedAt)
       };
     } catch (error) {
-        console.error('Image upload error:', error);
+      console.error('Image upload error:', error);
 
       if (error instanceof AppError) throw error;
       throw new AppError('Failed to process image upload', 500, 'IMAGE_PROCESSING_ERROR');
@@ -329,7 +329,7 @@ class CategoryService {
   async validateSlug(slug, excludeId = null) {
     try {
       const exists = await categoryRepository.slugExists(slug, excludeId);
-      return { isValid: !exists, exists };
+      return {isValid: !exists, exists};
     } catch (error) {
       throw new AppError('Failed to validate slug', 500, 'VALIDATE_SLUG_ERROR');
     }
@@ -366,6 +366,21 @@ class CategoryService {
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError('Failed to update category counters', 500, 'UPDATE_COUNTERS_ERROR');
+    }
+  }
+
+  // Update category status
+  async updateCategoryStatus(id, status, userId) {
+    try {
+      const category = await categoryRepository.findById(id);
+      if (!category) {
+        throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
+      }
+      const updatedCategory = await categoryRepository.update(id, {status, updatedBy: userId});
+      return await categoryRepository.findById(updatedCategory._id, true);
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError('Failed to update category status', 500, 'UPDATE_STATUS_ERROR');
     }
   }
 }
