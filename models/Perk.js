@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const slugifyUtils = require('../utils/slugify');
+const { optional } = require('joi');
 
 const perkSchema = new mongoose.Schema({
   // Basic Information
@@ -16,12 +17,6 @@ const perkSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
     index: true
-  },
-  description: {
-    type: String,
-    required: [true, 'Description is required'],
-    trim: true,
-    maxlength: [2000, 'Description cannot be more than 2000 characters']
   },
   shortDescription: {
     type: String,
@@ -380,7 +375,7 @@ perkSchema.index({ 'redemption.expiryDate': 1 });
 // Text search index
 perkSchema.index({
   title: 'text',
-  description: 'text',
+  shortDescription: 'text',
   'vendor.name': 'text',
   tags: 'text'
 });
@@ -499,7 +494,7 @@ perkSchema.pre('save', function(next) {
   
   // Auto-generate SEO description if not provided
   if (!this.seo.description) {
-    this.seo.description = this.shortDescription || this.description.substring(0, 160);
+    this.seo.description = this.shortDescription;
   }
   
   // Auto-generate OG title if not provided
