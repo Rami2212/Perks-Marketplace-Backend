@@ -31,7 +31,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const seoRoutes = require('./routes/seo');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Setup global error handlers
 setupGlobalHandlers();
@@ -46,7 +46,7 @@ database.connect().catch((error) => {
 app.use(helmet(appConfig.getSecurityConfig().helmet));
 
 // CORS configuration
-app.use(corsMiddleware.getCorsMiddleware());
+//app.use(corsMiddleware.getCorsMiddleware());
 
 // General middleware
 app.use(compression());
