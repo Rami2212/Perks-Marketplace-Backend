@@ -475,20 +475,6 @@ class AnalyticsService {
   createTrackingMiddleware() {
     return (req, res, next) => {
       try {
-        // Skip analytics for auth and health routes (no user data yet)
-        const skipPaths = [
-          '/health',
-          '/api/v1/auth/login',
-          '/api/v1/auth/register',
-          '/api/v1/auth/verify',
-          '/api/v1/auth/forgot-password',
-          '/api/v1/auth/reset-password'
-        ];
-
-        if (skipPaths.some(path => req.path.startsWith(path))) {
-          return next();
-        }
-
         // Generate or extract client ID from request
         req.clientId =
           req.headers['x-client-id'] ||
