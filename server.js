@@ -1,5 +1,3 @@
-// server.js
-
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -70,10 +68,10 @@ app.set('trust proxy', 1);
 app.use(rateLimitMiddleware.globalLimiter);
 
 // Analytics middleware
-app.use(analyticsMiddleware);
+//app.use(analyticsMiddleware);
 
 // SEO middleware
-app.use(seoMiddleware());
+//app.use(seoMiddleware());
 
 app.use(async (req, res, next) => {
   try {
