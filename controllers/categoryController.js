@@ -326,6 +326,18 @@ class CategoryController {
     });
   });
 
+  // Track category view
+  trackCategoryView = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    await categoryService.trackCategoryView(id, req.user.clientId, req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Category view tracked successfully'
+    });
+  });
+
   // Get menu categories
   getMenuCategories = catchAsync(async (req, res) => {
     const categories = await categoryService.getMenuCategories();
@@ -425,6 +437,31 @@ class CategoryController {
       success: true,
       data: category,
       message: 'Category counters updated successfully'
+    });
+  });
+
+  // Update category status
+  updateCategoryStatus = catchAsync(async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input data',
+          details: errors.array()
+        }
+      });
+    }
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const updatedCategory = await categoryService.updateCategoryStatus(id, status);
+
+    res.status(200).json({
+      success: true,
+      data: updatedCategory,
+      message: 'Category status updated successfully'
     });
   });
 }

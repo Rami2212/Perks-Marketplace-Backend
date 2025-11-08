@@ -3,6 +3,7 @@ const { body, param, query } = require('express-validator');
 const categoryController = require('../controllers/categoryController');
 const authMiddleware = require('../middleware/auth');
 const rateLimitMiddleware = require('../middleware/rateLimit');
+const { analyticsMiddleware } = require('../middleware/analytics');
 
 const router = express.Router();
 
@@ -38,6 +39,20 @@ const createCategoryValidation = [
     .optional()
     .isBoolean()
     .withMessage('isFeatured must be a boolean')
+  ,body('seoTitle')
+    .optional()
+    .trim()
+    .isLength({ max: 60 })
+    .withMessage('SEO title cannot be more than 60 characters'),
+  body('seoDescription')
+    .optional()
+    .trim()
+    .isLength({ max: 160 })
+    .withMessage('SEO description cannot be more than 160 characters'),
+  body('seoKeywords')
+    .optional()
+    .isArray()
+    .withMessage('SEO keywords must be an array of strings')
 ];
 
 const generateSlugValidation = [
@@ -62,7 +77,7 @@ router.get('/tree', categoryController.getCategoryTree);
 router.get('/menu', categoryController.getMenuCategories);
 router.get('/filters', categoryController.getFilterCategories);
 router.get('/featured', categoryController.getFeaturedCategories);
-router.get('/search', categoryController.searchCategories);
+router.get('/search', analyticsMiddleware, categoryController.searchCategories);
 router.get('/slug/:slug', slugValidation, categoryController.getCategoryBySlug);
 
 
@@ -122,6 +137,22 @@ router.post('/generate-slug',
 router.post('/:id/update-counters', 
   mongoIdValidation,
   categoryController.updateCategoryCounters
+);
+
+// Update category status
+router.post('/:id/update-status',
+  mongoIdValidation,
+    body('status')
+      .notEmpty()
+      .isIn(['active', 'inactive', 'draft'])
+      .withMessage('Invalid status'),
+    categoryController.updateCategoryStatus
+);
+
+router.post('/:id/track-view',
+  mongoIdValidation,
+  analyticsMiddleware,
+  categoryController.trackCategoryView
 );
 
 module.exports = router;

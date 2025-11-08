@@ -3,6 +3,7 @@ const categoryRepository = require('../repositories/categoryRepository');
 const uploadService = require('./uploadService');
 const slugifyUtils = require('../utils/slugify');
 const { AppError } = require('../middleware/errorHandler');
+const analyticsService = require('./analyticsService');
 
 class PerkService {
   // Create new perk (Admin/Client)
@@ -292,7 +293,7 @@ class PerkService {
 
       // Set updater
       updateData.updatedBy = userId;
-      
+
       const updatedPerk = await perkRepository.update(id, updateData);
 
       // Update category counters if category changed
@@ -369,13 +370,27 @@ class PerkService {
   }
 
   // Search perks (Public)
-  async searchPerks(query, options = {}) {
+  async searchPerks(query, options = {}, clientId = null, userId = null) {
     try {
       if (!query || query.trim().length < 2) {
         throw new AppError('Search query must be at least 2 characters', 400, 'INVALID_SEARCH_QUERY');
       }
 
-      return await perkRepository.search(query.trim(), options);
+      const result = await perkRepository.search(query.trim(), options);
+
+      // Track search event
+      if (analyticsService.isConfigured()) {
+        await analyticsService.trackEvent('SEARCH_PERFORMED', {
+          query: query.trim(),
+          resultsCount: result.total || 0,
+          type: 'perks'
+        }, {
+          clientId,
+          userId
+        });
+      }
+
+      return result;
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError('Failed to search perks', 500, 'SEARCH_PERKS_ERROR');
@@ -403,23 +418,78 @@ class PerkService {
   }
 
   // Track perk view
-  async trackView(id) {
+  async trackView(id, clientId = null, userId = null) {
     try {
-      return await perkRepository.incrementViewCount(id);
+      const perk = await perkRepository.incrementViewCount(id);
+
+      if (perk && analyticsService.isConfigured()) {
+        await analyticsService.trackEvent('PERK_VIEW', {
+          perkId: id,
+          title: perk.title,
+          category: perk.categoryId?.name,
+          vendor: perk.vendor?.name,
+          value: perk.discountedPrice?.amount || perk.originalPrice?.amount || 0,
+          type: 'perk_view'
+        }, {
+          clientId,
+          userId
+        });
+      }
+
+      return perk;
     } catch (error) {
       console.warn('Failed to track view for perk:', id, error.message);
-      // Don't throw error for tracking failures
       return null;
     }
   }
 
   // Track perk click
-  async trackClick(id) {
+  async trackClick(id, clickType = 'cta_button', clientId = null, userId = null) {
     try {
-      return await perkRepository.incrementClickCount(id);
+      const perk = await perkRepository.incrementClickCount(id);
+
+      if (perk && analyticsService.isConfigured()) {
+        await analyticsService.trackEvent('PERK_CLICK', {
+          perkId: id,
+          title: perk.title,
+          category: perk.categoryId?.name,
+          vendor: perk.vendor?.name,
+          clickType,
+          value: perk.discountedPrice?.amount || perk.originalPrice?.amount || 0
+        }, {
+          clientId,
+          userId
+        });
+      }
+
+      return perk;
     } catch (error) {
       console.warn('Failed to track click for perk:', id, error.message);
-      // Don't throw error for tracking failures
+      return null;
+    }
+  }
+
+  // Track perk share
+  async trackShare(id, shareMethod, clientId = null, userId = null) {
+    try {
+      const perk = await perkRepository.findById(id);
+
+      if (perk && analyticsService.isConfigured()) {
+        await analyticsService.trackEvent('PERK_SHARE', {
+          perkId: id,
+          title: perk.title,
+          shareMethod,
+          category: perk.categoryId?.name,
+          vendor: perk.vendor?.name
+        }, {
+          clientId,
+          userId
+        });
+      }
+
+      return perk;
+    } catch (error) {
+      console.warn('Failed to track share for perk:', id, error.message);
       return null;
     }
   }

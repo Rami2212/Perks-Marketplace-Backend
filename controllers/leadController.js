@@ -28,7 +28,9 @@ class LeadController {
         campaign: req.query.utm_campaign,
         term: req.query.utm_term,
         content: req.query.utm_content
-      }
+      },
+      clientId: req.user.clientId,
+      userId: req.user.id
     };
 
     const lead = await leadService.submitLead(req.body, requestInfo);

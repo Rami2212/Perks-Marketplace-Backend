@@ -17,6 +17,8 @@ const { errorHandler, notFound, setupGlobalHandlers } = require('./middleware/er
 const rateLimitMiddleware = require('./middleware/rateLimit');
 const corsMiddleware = require('./middleware/cors');
 const loggingMiddleware = require('./middleware/logging');
+const { analyticsMiddleware } = require('./middleware/analytics');
+const { seoMiddleware } = require('./middleware/seoMiddleware');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -25,6 +27,8 @@ const leadRoutes = require('./routes/leads');
 const perkRoutes = require('./routes/perks');
 const blogCategoryRoutes = require('./routes/blogCategories');
 const blogRoutes = require('./routes/blog');
+const dashboardRoutes = require('./routes/dashboard');
+const seoRoutes = require('./routes/seo');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,10 +69,12 @@ app.set('trust proxy', 1);
 // Rate limiting
 app.use(rateLimitMiddleware.globalLimiter);
 
-// NOTE: You can remove this if you're fully migrated to Cloudinary
-// app.use('/uploads', express.static('uploads'));
+// Analytics middleware
+app.use(analyticsMiddleware);
 
-// Ensure DB is connected before processing requests
+// SEO middleware
+app.use(seoMiddleware());
+
 app.use(async (req, res, next) => {
   try {
     if (!(await database.isHealthy())) {
@@ -90,6 +96,9 @@ app.use(`/api/${apiVersion}/leads`, leadRoutes);
 app.use(`/api/${apiVersion}/perks`, perkRoutes);
 app.use(`/api/${apiVersion}/blog-categories`, blogCategoryRoutes);
 app.use(`/api/${apiVersion}/blog`, blogRoutes);
+app.use(`/api/${apiVersion}/dashboard`, dashboardRoutes);
+app.use(`/api/${apiVersion}/seo`, seoRoutes);
+app.use('/', seoRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -150,7 +159,13 @@ app.get(`/api/${apiVersion}`, (req, res) => {
       perks: `/api/${apiVersion}/perks`,
       blogCategories: `/api/${apiVersion}/blog-categories`,
       blog: `/api/${apiVersion}/blog`,
+      dashboard: `/api/${apiVersion}/dashboard`,
+      seo: `/api/${apiVersion}/seo`,
       health: '/health'
+    },
+    seoEndpoints: {
+      sitemap: `/sitemap.xml`,
+      robots: `/robots.txt`
     },
     documentation: `${req.protocol}://${req.get('host')}/docs`,
     timestamp: new Date().toISOString()

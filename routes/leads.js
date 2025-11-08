@@ -3,6 +3,7 @@ const { body, param, query } = require('express-validator');
 const leadController = require('../controllers/leadController');
 const authMiddleware = require('../middleware/auth');
 const rateLimitMiddleware = require('../middleware/rateLimit');
+const { analyticsMiddleware } = require('../middleware/analytics');
 
 const router = express.Router();
 
@@ -223,6 +224,7 @@ const dateRangeValidation = [
 router.post('/submit', 
   rateLimitMiddleware.leadSubmissionLimiter,
   submitLeadValidation,
+  analyticsMiddleware,
   leadController.submitLead
 );
 
@@ -319,12 +321,14 @@ router.post('/:id/notes',
 router.post('/:id/assign', 
   mongoIdValidation,
   assignLeadValidation,
+  analyticsMiddleware,
   leadController.assignLead
 );
 
 router.put('/:id/status', 
   mongoIdValidation,
   updateStatusValidation,
+  analyticsMiddleware,
   leadController.updateStatus
 );
 
@@ -337,12 +341,14 @@ router.post('/:id/follow-up',
 router.post('/:id/contact', 
   mongoIdValidation,
   recordContactValidation,
+  analyticsMiddleware,
   leadController.recordContactAttempt
 );
 
 router.post('/:id/convert', 
   mongoIdValidation,
   convertLeadValidation,
+  analyticsMiddleware,
   leadController.convertLead
 );
 
