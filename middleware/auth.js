@@ -4,25 +4,9 @@ const authRepository = require('../repositories/authRepository');
 const { AppError } = require('./errorHandler');
 
 class AuthMiddleware {
-  constructor() {
-    // Public paths that don’t require auth
-    this.publicPaths = [
-      '/health', 
-      '/sitemap.xml', 
-      '/robots.txt', 
-      '/api/v1/auth/login', 
-      '/api/v1/auth/register', 
-      '/api/v1/auth/refresh-token', 
-      '/api/v1/perks', 
-      '/api/v1/categories'
-    ];
-  }
   // Main authentication middleware
   authenticate = async (req, res, next) => {
     try {
-      if (this.publicPaths.includes(req.path)) {
-        return next();
-      }
       const token = this.extractToken(req);
       
       if (!token) {
