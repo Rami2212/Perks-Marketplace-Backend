@@ -9,7 +9,7 @@ class AnalyticsService {
     this.propertyId = process.env.GA4_PROPERTY_ID;
     this.enabled = process.env.GA4_ENABLED === 'true';
     this.debug = process.env.GA4_DEBUG === 'true';
-    
+
     // Initialize GA4 Data API client for reporting
     if (this.propertyId && process.env.GA4_SERVICE_ACCOUNT_KEY_PATH) {
       try {
@@ -99,48 +99,48 @@ class AnalyticsService {
   // Track custom events with proper GA4 event structure
   async trackEvent(eventType, data = {}, options = {}) {
     const { clientId, userId } = options;
-    
+
     try {
       switch (eventType) {
         case 'LEAD_SUBMISSION':
           return await this.trackLeadSubmission(data, clientId, userId);
-        
+
         case 'LEAD_STATUS_CHANGE':
           return await this.trackLeadStatusChange(data, clientId, userId);
-        
+
         case 'LEAD_ASSIGNED':
           return await this.trackLeadAssigned(data, clientId, userId);
-        
+
         case 'LEAD_CONTACT_ATTEMPT':
           return await this.trackLeadContactAttempt(data, clientId, userId);
-        
+
         case 'LEAD_CONVERTED':
           return await this.trackLeadConverted(data, clientId, userId);
-        
+
         case 'PERK_VIEW':
           return await this.trackPerkView(data, clientId, userId);
-        
+
         case 'PERK_CLICK':
           return await this.trackPerkClick(data, clientId, userId);
-        
+
         case 'PERK_SHARE':
           return await this.trackPerkShare(data, clientId, userId);
-        
+
         case 'CATEGORY_VIEW':
           return await this.trackCategoryView(data, clientId, userId);
-        
+
         case 'SEARCH_PERFORMED':
           return await this.trackSearch(data, clientId, userId);
-        
+
         case 'USER_SIGNUP':
           return await this.trackUserSignup(data, clientId, userId);
-        
+
         case 'USER_LOGIN':
           return await this.trackUserLogin(data, clientId, userId);
 
         case 'BLOG_POST_VIEW':
           return await this.trackBlogPostView(data, clientId, userId);
-        
+
         default:
           // Generic custom event
           return await this.sendEvent(eventType.toLowerCase(), data, clientId, userId);
@@ -279,7 +279,7 @@ class AnalyticsService {
   // Enhanced conversion tracking
   async trackConversion(conversionData, clientId, userId) {
     const { type, value, currency = 'USD', leadId, perkId } = conversionData;
-    
+
     return await this.sendEvent('purchase', {
       transaction_id: leadId || uuidv4(),
       value: value,
@@ -471,34 +471,64 @@ class AnalyticsService {
   }
 
   // Middleware for automatic client ID generation and tracking
+  // Middleware for automatic client ID generation and tracking
   createTrackingMiddleware() {
     return (req, res, next) => {
-      // Generate or extract client ID from request
-      req.clientId = req.headers['x-client-id'] || 
-                    req.cookies?.ga_client_id || 
-                    this.generateClientId();
-      
-      // Set client ID in response cookie for frontend tracking
-      if (!req.cookies?.ga_client_id) {
-        res.cookie('ga_client_id', req.clientId, {
-          maxAge: 1000 * 60 * 60 * 24 * 365 * 2, // 2 years
-          httpOnly: false, // Allow frontend access
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax'
-        });
+      try {
+        // Skip analytics for auth and health routes (no user data yet)
+        const skipPaths = [
+          '/health',
+          '/api/v1/auth/login',
+          '/api/v1/auth/register',
+          '/api/v1/auth/verify',
+          '/api/v1/auth/forgot-password',
+          '/api/v1/auth/reset-password'
+        ];
+
+        if (skipPaths.some(path => req.path.startsWith(path))) {
+          return next();
+        }
+
+        // Generate or extract client ID from request
+        req.clientId =
+          req.headers['x-client-id'] ||
+          req.cookies?.ga_client_id ||
+          this.generateClientId();
+
+        // Set client ID in cookie if not present
+        if (!req.cookies?.ga_client_id) {
+          res.cookie('ga_client_id', req.clientId, {
+            maxAge: 1000 * 60 * 60 * 24 * 365 * 2, // 2 years
+            httpOnly: false,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+          });
+        }
+
+        // Add helper for safe event tracking
+        res.trackEvent = async (eventType, data = {}) => {
+          // Handle missing user safely
+          const userId = req.user ? req.user.id : null;
+
+          // Avoid blocking route if analytics fails
+          try {
+            return await this.trackEvent(eventType, data, {
+              clientId: req.clientId,
+              userId,
+            });
+          } catch (err) {
+            console.warn('Analytics tracking error:', err.message);
+          }
+        };
+
+        next();
+      } catch (error) {
+        console.warn('Analytics middleware error:', error.message);
+        next(); // never block the request
       }
-
-      // Add tracking helper methods to response
-      res.trackEvent = async (eventType, data = {}) => {
-        return await this.trackEvent(eventType, data, {
-          clientId: req.clientId,
-          userId: req.user?.id
-        });
-      };
-
-      next();
     };
   }
+
 }
 
 module.exports = new AnalyticsService();
