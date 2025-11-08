@@ -11,7 +11,11 @@ class CorsMiddleware {
       credentials: this.corsConfig.credentials,
       optionsSuccessStatus: this.corsConfig.optionsSuccessStatus,
       methods: this.corsConfig.methods,
-      allowedHeaders: this.corsConfig.allowedHeaders,
+      allowedHeaders: [
+        this.corsConfig.allowedHeaders,
+        'GA-Client-ID',
+        'GA-Source'
+      ],
       exposedHeaders: [
         'X-RateLimit-Limit',
         'X-RateLimit-Remaining',
