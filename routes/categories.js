@@ -3,6 +3,7 @@ const { body, param, query } = require('express-validator');
 const categoryController = require('../controllers/categoryController');
 const authMiddleware = require('../middleware/auth');
 const rateLimitMiddleware = require('../middleware/rateLimit');
+const { analyticsMiddleware } = require('../middleware/analytics');
 
 const router = express.Router();
 
@@ -76,7 +77,7 @@ router.get('/tree', categoryController.getCategoryTree);
 router.get('/menu', categoryController.getMenuCategories);
 router.get('/filters', categoryController.getFilterCategories);
 router.get('/featured', categoryController.getFeaturedCategories);
-router.get('/search', categoryController.searchCategories);
+router.get('/search', analyticsMiddleware, categoryController.searchCategories);
 router.get('/slug/:slug', slugValidation, categoryController.getCategoryBySlug);
 
 
@@ -146,6 +147,12 @@ router.post('/:id/update-status',
       .isIn(['active', 'inactive', 'draft'])
       .withMessage('Invalid status'),
     categoryController.updateCategoryStatus
+);
+
+router.post('/:id/track-view',
+  mongoIdValidation,
+  analyticsMiddleware,
+  categoryController.trackCategoryView
 );
 
 module.exports = router;

@@ -188,6 +188,9 @@ class PerkController {
 
     const perk = await perkService.getPerkByIdPublic(id, includeRelations === 'true');
 
+    // Track view (don't await to avoid slowing response)
+    perkService.trackView(perk._id, req.user?.clientId, req.user?.id);
+
     res.status(200).json({
       success: true,
       data: perk
@@ -202,7 +205,7 @@ class PerkController {
     const perk = await perkService.getPerkBySlug(slug, includeRelations === 'true');
 
     // Track view (don't await to avoid slowing response)
-    perkService.trackView(perk._id);
+    perkService.trackView(perk._id, req.user?.clientId, req.user?.id);
 
     res.status(200).json({
       success: true,
@@ -386,11 +389,24 @@ class PerkController {
     const { id } = req.params;
 
     // Track click (don't await to avoid slowing response)
-    perkService.trackClick(id);
+    await perkService.trackClick(id, clickType, req.user?.clientId, req.user?.id);
 
     res.status(200).json({
       success: true,
       message: 'Click tracked'
+    });
+  });
+
+  // Tracking shares
+  trackShare = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const { shareMethod } = req.body;
+
+    await perkService.trackShare(id, shareMethod, req.user?.clientId, req.user?.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Share tracked'
     });
   });
 

@@ -17,6 +17,7 @@ const { errorHandler, notFound, setupGlobalHandlers } = require('./middleware/er
 const rateLimitMiddleware = require('./middleware/rateLimit');
 const corsMiddleware = require('./middleware/cors');
 const loggingMiddleware = require('./middleware/logging');
+const { analyticsMiddleware } = require('./middleware/analytics');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -65,10 +66,9 @@ app.set('trust proxy', 1);
 // Rate limiting
 app.use(rateLimitMiddleware.globalLimiter);
 
-// NOTE: You can remove this if you're fully migrated to Cloudinary
-// app.use('/uploads', express.static('uploads'));
+// Analytics middleware
+app.use(analyticsMiddleware);
 
-// Ensure DB is connected before processing requests
 app.use(async (req, res, next) => {
   try {
     if (!(await database.isHealthy())) {
