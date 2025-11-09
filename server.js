@@ -5,6 +5,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 
 // Import configuration
 const database = require('./config/database');
@@ -48,6 +49,9 @@ app.use(corsMiddleware.getCorsMiddleware());
 
 // General middleware
 app.use(compression());
+
+// Cookie parsing middleware
+app.use(cookieParser());
 
 // Logging middleware
 const logger = loggingMiddleware.getLogger();
