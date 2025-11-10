@@ -6,6 +6,7 @@ const uploadService = require('./uploadService');
 const slugifyUtils = require('../utils/slugify');
 const { AppError } = require('../middleware/errorHandler');
 const BlogAnalyticsEvent = require('../models/BlogAnalyticsEvent');
+const seoValidator = require('../utils/seoValidator');
 
 class BlogService {
   // Create new blog post
@@ -45,6 +46,12 @@ class BlogService {
       postData.updatedBy = userId;
 
       const post = await blogRepository.create(postData);
+
+      // Validate SEO on creation
+const seoValidation = seoValidator.validateSeoFields(post, 'post');
+if (seoValidation.issues.length > 0) {
+  console.warn(`SEO issues detected for post "${post.title}":`, seoValidation.issues);
+}
 
       // Update category counters
       if (post.categoryId) {
@@ -266,6 +273,12 @@ class BlogService {
       updateData.updatedBy = userId;
       
       const updatedPost = await blogRepository.update(id, updateData);
+
+      // Validate SEO on update
+const seoValidation = seoValidator.validateSeoFields(updatedPost, 'post');
+if (seoValidation.issues.length > 0) {
+  console.warn(`SEO issues detected for post "${updatedPost.title}":`, seoValidation.issues);
+}
 
       // Update category counters if category changed
       if (updateData.categoryId && updateData.categoryId !== post.categoryId) {

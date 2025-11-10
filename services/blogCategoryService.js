@@ -4,6 +4,7 @@ const blogCategoryRepository = require('../repositories/blogCategoryRepository')
 const uploadService = require('./uploadService');
 const slugifyUtils = require('../utils/slugify');
 const { AppError } = require('../middleware/errorHandler');
+const seoValidator = require('../utils/seoValidator');
 
 class BlogCategoryService {
   // Create new blog category with optional image
@@ -29,6 +30,12 @@ class BlogCategoryService {
       categoryData.updatedBy = userId;
 
       const category = await blogCategoryRepository.create(categoryData);
+
+      // Validate SEO on creation
+const seoValidation = seoValidator.validateSeoFields(category, 'category');
+if (seoValidation.issues.length > 0) {
+  console.warn(`SEO issues detected for category "${category.name}":`, seoValidation.issues);
+}
 
       return await blogCategoryRepository.findById(category._id, true);
     } catch (error) {
@@ -155,6 +162,12 @@ class BlogCategoryService {
 
       // Set updater
       updateData.updatedBy = userId;
+
+      // Validate SEO on update
+const seoValidation = seoValidator.validateSeoFields(updatedCategory, 'category');
+if (seoValidation.issues.length > 0) {
+  console.warn(`SEO issues detected for category "${updatedCategory.name}":`, seoValidation.issues);
+}
 
       const updatedCategory = await blogCategoryRepository.update(id, updateData);
 

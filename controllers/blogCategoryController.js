@@ -4,6 +4,7 @@ const blogCategoryService = require('../services/blogCategoryService');
 const { validationResult } = require('express-validator');
 const { catchAsync } = require('../middleware/errorHandler');
 const multer = require('multer');
+const seoAuditService = require('../services/seoAuditService');
 
 const storage = multer.memoryStorage();
 
@@ -320,6 +321,27 @@ class BlogCategoryController {
       success: true,
       data: category,
       message: 'Blog category counters updated successfully'
+    });
+  });
+  // Get SEO audit for single blog category
+  getSeoAudit = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    const audit = await seoAuditService.auditBlogCategory(id);
+
+    res.status(200).json({
+      success: true,
+      data: audit
+    });
+  });
+
+  // Get SEO audit dashboard for all categories
+  getSeoAuditDashboard = catchAsync(async (req, res) => {
+    const audit = await seoAuditService.auditAllBlogCategories();
+
+    res.status(200).json({
+      success: true,
+      data: audit
     });
   });
 }

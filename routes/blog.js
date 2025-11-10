@@ -157,4 +157,22 @@ router.post('/admin/generate-slug',
   blogController.generateSlug
 );
 
+// SEO Audit routes
+router.get('/admin/seo/audit-dashboard',
+  blogController.getSeoAuditDashboard
+);
+
+router.get('/admin/seo/critical-issues',
+  blogController.getCriticalSeoIssues
+);
+
+router.get('/admin/seo/duplicate-slugs',
+  blogController.getDuplicateSlugs
+);
+
+router.get('/admin/:id/seo-audit',
+  mongoIdValidation,
+  blogController.getSeoAudit
+);
+
 module.exports = router;

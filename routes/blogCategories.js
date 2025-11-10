@@ -109,4 +109,14 @@ router.post('/:id/update-counters',
   blogCategoryController.updateCategoryCounters
 );
 
+// SEO Audit routes
+router.get('/admin/seo/audit-dashboard',
+  blogCategoryController.getSeoAuditDashboard
+);
+
+router.get('/admin/:id/seo-audit',
+  mongoIdValidation,
+  blogCategoryController.getSeoAudit
+);
+
 module.exports = router;

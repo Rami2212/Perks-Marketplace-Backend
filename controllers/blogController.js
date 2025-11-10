@@ -4,6 +4,7 @@ const blogService = require('../services/blogService');
 const { validationResult } = require('express-validator');
 const { catchAsync } = require('../middleware/errorHandler');
 const multer = require('multer');
+const seoAuditService = require('../services/seoAuditService');
 
 const storage = multer.memoryStorage();
 
@@ -388,6 +389,54 @@ class BlogController {
       success: true,
       data: updatedPost,
       message: 'Gallery image removed successfully'
+    });
+  });
+
+  // Get SEO audit for single blog post
+  getSeoAudit = catchAsync(async (req, res) => {
+    const { id } = req.params;
+
+    const audit = await seoAuditService.auditBlogPost(id);
+
+    res.status(200).json({
+      success: true,
+      data: audit
+    });
+  });
+
+  // Get SEO audit dashboard for all posts
+  getSeoAuditDashboard = catchAsync(async (req, res) => {
+    const { status, categoryId } = req.query;
+
+    const filters = {};
+    if (status) filters.status = status;
+    if (categoryId) filters.categoryId = categoryId;
+
+    const audit = await seoAuditService.auditAllBlogPosts(filters);
+
+    res.status(200).json({
+      success: true,
+      data: audit
+    });
+  });
+
+  // Get critical SEO issues
+  getCriticalSeoIssues = catchAsync(async (req, res) => {
+    const issues = await seoAuditService.getCriticalSeoIssues();
+
+    res.status(200).json({
+      success: true,
+      data: issues
+    });
+  });
+
+  // Get duplicate slugs
+  getDuplicateSlugs = catchAsync(async (req, res) => {
+    const duplicates = await seoAuditService.getDuplicateSlugs();
+
+    res.status(200).json({
+      success: true,
+      data: duplicates
     });
   });
 }
