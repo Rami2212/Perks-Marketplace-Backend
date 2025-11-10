@@ -16,7 +16,7 @@ const { errorHandler, notFound, setupGlobalHandlers } = require('./middleware/er
 const rateLimitMiddleware = require('./middleware/rateLimit');
 const corsMiddleware = require('./middleware/cors');
 const loggingMiddleware = require('./middleware/logging');
-const { analyticsMiddleware } = require('./middleware/analytics');
+//const { analyticsMiddleware } = require('./middleware/analytics');
 const { seoMiddleware } = require('./middleware/seoMiddleware');
 
 // Import routes
@@ -72,7 +72,7 @@ app.set('trust proxy', 1);
 app.use(rateLimitMiddleware.globalLimiter);
 
 // Analytics middleware
-app.use(analyticsMiddleware);
+// app.use(analyticsMiddleware);
 
 // SEO middleware
 app.use(seoMiddleware());

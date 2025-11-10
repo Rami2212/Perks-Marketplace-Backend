@@ -303,16 +303,16 @@ class CategoryService {
       const result = await categoryRepository.search(query.trim(), options);
 
       // Track search event
-      if (analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('SEARCH_PERFORMED', {
-          query: query.trim(),
-          resultsCount: result.total || 0,
-          type: 'categories'
-        }, {
-          clientId,
-          userId
-        });
-      }
+      // if (analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('SEARCH_PERFORMED', {
+      //     query: query.trim(),
+      //     resultsCount: result.total || 0,
+      //     type: 'categories'
+      //   }, {
+      //     clientId,
+      //     userId
+      //   });
+      // }
 
       return result;
     } catch (error) {

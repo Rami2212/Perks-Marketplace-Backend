@@ -379,16 +379,16 @@ class PerkService {
       const result = await perkRepository.search(query.trim(), options);
 
       // Track search event
-      if (analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('SEARCH_PERFORMED', {
-          query: query.trim(),
-          resultsCount: result.total || 0,
-          type: 'perks'
-        }, {
-          clientId,
-          userId
-        });
-      }
+      // if (analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('SEARCH_PERFORMED', {
+      //     query: query.trim(),
+      //     resultsCount: result.total || 0,
+      //     type: 'perks'
+      //   }, {
+      //     clientId,
+      //     userId
+      //   });
+      // }
 
       return result;
     } catch (error) {
@@ -422,19 +422,19 @@ class PerkService {
     try {
       const perk = await perkRepository.incrementViewCount(id);
 
-      if (perk && analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('PERK_VIEW', {
-          perkId: id,
-          title: perk.title,
-          category: perk.categoryId?.name,
-          vendor: perk.vendor?.name,
-          value: perk.discountedPrice?.amount || perk.originalPrice?.amount || 0,
-          type: 'perk_view'
-        }, {
-          clientId,
-          userId
-        });
-      }
+      // if (perk && analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('PERK_VIEW', {
+      //     perkId: id,
+      //     title: perk.title,
+      //     category: perk.categoryId?.name,
+      //     vendor: perk.vendor?.name,
+      //     value: perk.discountedPrice?.amount || perk.originalPrice?.amount || 0,
+      //     type: 'perk_view'
+      //   }, {
+      //     clientId,
+      //     userId
+      //   });
+      // }
 
       return perk;
     } catch (error) {
@@ -448,19 +448,19 @@ class PerkService {
     try {
       const perk = await perkRepository.incrementClickCount(id);
 
-      if (perk && analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('PERK_CLICK', {
-          perkId: id,
-          title: perk.title,
-          category: perk.categoryId?.name,
-          vendor: perk.vendor?.name,
-          clickType,
-          value: perk.discountedPrice?.amount || perk.originalPrice?.amount || 0
-        }, {
-          clientId,
-          userId
-        });
-      }
+      // if (perk && analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('PERK_CLICK', {
+      //     perkId: id,
+      //     title: perk.title,
+      //     category: perk.categoryId?.name,
+      //     vendor: perk.vendor?.name,
+      //     clickType,
+      //     value: perk.discountedPrice?.amount || perk.originalPrice?.amount || 0
+      //   }, {
+      //     clientId,
+      //     userId
+      //   });
+      // }
 
       return perk;
     } catch (error) {

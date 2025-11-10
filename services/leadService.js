@@ -49,19 +49,19 @@ class LeadService {
       await this.sendLeadNotifications(lead);
 
       // Track analytics event
-      if (analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('LEAD_SUBMISSION', {
-          leadId: lead._id.toString(),
-          perkId: lead.perkId?.toString(),
-          categoryId: lead.categoryId?.toString(),
-          source: lead.source,
-          score: lead.leadScore,
-          value: lead.leadScore || 0
-        }, {
-          clientId,
-          userId: lead._id.toString()
-        });
-      }
+      // if (analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('LEAD_SUBMISSION', {
+      //     leadId: lead._id.toString(),
+      //     perkId: lead.perkId?.toString(),
+      //     categoryId: lead.categoryId?.toString(),
+      //     source: lead.source,
+      //     score: lead.leadScore,
+      //     value: lead.leadScore || 0
+      //   }, {
+      //     clientId,
+      //     userId: lead._id.toString()
+      //   });
+      // }
 
       return await leadRepository.findById(lead._id, true);
     } catch (error) {
@@ -145,19 +145,18 @@ class LeadService {
 
       const updatedLead = await leadRepository.update(id, updateData);
 
-      // Track analytics event for status changes
       // Track analytics event
-      if (analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('LEAD_STATUS_CHANGE', {
-          leadId: id,
-          oldStatus,
-          newStatus: status,
-          updatedBy: userId
-        }, {
-          clientId,
-          userId: userId
-        });
-      }
+      // if (analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('LEAD_STATUS_CHANGE', {
+      //     leadId: id,
+      //     oldStatus,
+      //     newStatus: status,
+      //     updatedBy: userId
+      //   }, {
+      //     clientId,
+      //     userId: userId
+      //   });
+      // }
 
       return await leadRepository.findById(updatedLead._id, true);
     } catch (error) {
@@ -212,16 +211,16 @@ class LeadService {
       }
 
       // Track analytics event
-      if (analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('LEAD_ASSIGNED', {
-          leadId: id,
-          assignedTo: assigneeId,
-          assignedBy: assignedBy
-        }, {
-          clientId,
-          userId: assignedBy
-        });
-      }
+      // if (analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('LEAD_ASSIGNED', {
+      //     leadId: id,
+      //     assignedTo: assigneeId,
+      //     assignedBy: assignedBy
+      //   }, {
+      //     clientId,
+      //     userId: assignedBy
+      //   });
+      // }
 
       return lead;
     } catch (error) {
@@ -244,17 +243,17 @@ class LeadService {
       }
 
       // Track analytics event
-      if (analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('LEAD_STATUS_CHANGE', {
-          leadId: id,
-          oldStatus,
-          newStatus: status,
-          updatedBy: userId
-        }, {
-          clientId,
-          userId: userId
-        });
-      }
+      // if (analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('LEAD_STATUS_CHANGE', {
+      //     leadId: id,
+      //     oldStatus,
+      //     newStatus: status,
+      //     updatedBy: userId
+      //   }, {
+      //     clientId,
+      //     userId: userId
+      //   });
+      // }
 
       return updatedLead;
     } catch (error) {
@@ -290,16 +289,16 @@ class LeadService {
       const lead = await leadRepository.recordContactAttempt(id, userId, notes);
 
       // Track analytics event
-      if (analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('LEAD_CONTACT_ATTEMPT', {
-          leadId: id,
-          contactMethod,
-          userId
-        }, {
-          clientId,
-          userId
-        });
-      }
+      // if (analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('LEAD_CONTACT_ATTEMPT', {
+      //     leadId: id,
+      //     contactMethod,
+      //     userId
+      //   }, {
+      //     clientId,
+      //     userId
+      //   });
+      // }
 
       return lead;
     } catch (error) {
@@ -447,18 +446,18 @@ class LeadService {
       await this.sendConversionNotification(lead);
 
       // Track analytics event
-      if (analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('LEAD_CONVERTED', {
-          leadId: id,
-          conversionValue: conversionData.value || 0,
-          conversionType: conversionData.type,
-          convertedBy: userId,
-          value: conversionData.value || 0
-        }, {
-          clientId,
-          userId: userId
-        });
-      }
+      // if (analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('LEAD_CONVERTED', {
+      //     leadId: id,
+      //     conversionValue: conversionData.value || 0,
+      //     conversionType: conversionData.type,
+      //     convertedBy: userId,
+      //     value: conversionData.value || 0
+      //   }, {
+      //     clientId,
+      //     userId: userId
+      //   });
+      // }
 
       return await leadRepository.findById(id, true);
     } catch (error) {
