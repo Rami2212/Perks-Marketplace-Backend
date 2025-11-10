@@ -389,7 +389,7 @@ class PerkController {
     const { id } = req.params;
 
     // Track click (don't await to avoid slowing response)
-    await perkService.trackClick(id, clickType, req.user?.clientId, req.user?.id);
+    await perkService.trackClick(id, req.user?.clientId, req.user?.id);
 
     res.status(200).json({
       success: true,
