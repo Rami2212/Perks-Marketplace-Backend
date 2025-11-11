@@ -38,6 +38,9 @@ const staticPageSchema = new mongoose.Schema({
     required: true
   },
   
+  // Hero image schema
+heroImage: imageSchema,
+  
   // Contact Form (specific to contact page)
   contactForm: {
     enabled: {

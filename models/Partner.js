@@ -47,6 +47,12 @@ const partnerSchema = new mongoose.Schema({
   
   // Media - Updated for Cloudinary
   logo: imageSchema,
+
+  // display partner field
+displayOnHomepage: {
+  type: Boolean,
+  default: false
+},
   
   // Submission Status
   status: {

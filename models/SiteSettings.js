@@ -84,6 +84,14 @@ const siteSettingsSchema = new mongoose.Schema({
       }
     }
   },
+
+  // Home page image schema
+homepageImages: {
+  heroBackground: imageSchema,
+  section1Image: imageSchema,
+  section2Image: imageSchema,
+  section3Image: imageSchema
+},
   
   // Navigation
   navigation: {
