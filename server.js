@@ -136,6 +136,9 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// 404 routes
+app.use('/api', notFoundPageRoutes);
+
 // API routes
 const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
@@ -147,7 +150,6 @@ app.use(`/api/${apiVersion}/blog`, blogRoutes);
 app.use(`/api/${apiVersion}/dashboard`, dashboardRoutes);
 app.use(`/api/${apiVersion}/seo`, seoRoutes);
 app.use('/', seoRoutes);
-app.use('/api', notFoundPageRoutes);
 
 // API info endpoint
 app.get(`/api/${apiVersion}`, (req, res) => {
