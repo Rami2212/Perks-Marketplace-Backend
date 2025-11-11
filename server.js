@@ -28,7 +28,7 @@ const blogCategoryRoutes = require('./routes/blogCategories');
 const blogRoutes = require('./routes/blog');
 const dashboardRoutes = require('./routes/dashboard');
 const seoRoutes = require('./routes/seo');
-
+const notFoundPageRoutes = require('./routes/notFoundPage');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -147,6 +147,7 @@ app.use(`/api/${apiVersion}/blog`, blogRoutes);
 app.use(`/api/${apiVersion}/dashboard`, dashboardRoutes);
 app.use(`/api/${apiVersion}/seo`, seoRoutes);
 app.use('/', seoRoutes);
+app.use('/api', notFoundPageRoutes);
 
 // API info endpoint
 app.get(`/api/${apiVersion}`, (req, res) => {
