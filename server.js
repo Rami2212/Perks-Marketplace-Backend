@@ -28,7 +28,7 @@ const blogCategoryRoutes = require('./routes/blogCategories');
 const blogRoutes = require('./routes/blog');
 const dashboardRoutes = require('./routes/dashboard');
 const seoRoutes = require('./routes/seo');
-
+const notFoundPageRoutes = require('./routes/notFoundPage');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -135,6 +135,9 @@ app.get('/health', async (req, res) => {
     });
   }
 });
+
+// 404 routes
+app.use('/api', notFoundPageRoutes);
 
 // API routes
 const apiVersion = process.env.API_VERSION || 'v1';
