@@ -3,7 +3,6 @@ const { body, param, query } = require('express-validator');
 const perkController = require('../controllers/perkController');
 const authMiddleware = require('../middleware/auth');
 const rateLimitMiddleware = require('../middleware/rateLimit');
-const { analyticsMiddleware } = require('../middleware/analytics');
 
 const router = express.Router();
 
@@ -128,7 +127,6 @@ router.get('/', perkController.getActivePerks);
 // Get perk by ID
 router.get('/:id', 
   mongoIdValidation,
-  analyticsMiddleware,
   perkController.getPerkByIdPublic
 );
 
@@ -144,7 +142,6 @@ router.get('/search',
 // Get perk by slug
 router.get('/slug/:slug', 
   slugValidation,
-  analyticsMiddleware,
   perkController.getPerkBySlug
 );
 
