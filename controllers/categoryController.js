@@ -330,7 +330,7 @@ class CategoryController {
   trackCategoryView = catchAsync(async (req, res) => {
     const { id } = req.params;
 
-    await categoryService.trackCategoryView(id, req.user.clientId, req.user.id);
+    await categoryService.trackCategoryView(id, req.user?.clientId, req.user?.id);
 
     res.status(200).json({
       success: true,

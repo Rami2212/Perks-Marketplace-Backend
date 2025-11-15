@@ -326,17 +326,17 @@ class CategoryService {
     try {
       const category = await categoryRepository.findById(categoryId);
 
-      if (category && analyticsService.isConfigured()) {
-        await analyticsService.trackEvent('CATEGORY_VIEW', {
-          categoryId,
-          categoryName: category.name,
-          level: category.level,
-          perkCount: category.perkCount || 0
-        }, {
-          clientId,
-          userId
-        });
-      }
+      // if (category && analyticsService.isConfigured()) {
+      //   await analyticsService.trackEvent('CATEGORY_VIEW', {
+      //     categoryId,
+      //     categoryName: category.name,
+      //     level: category.level,
+      //     perkCount: category.perkCount || 0
+      //   }, {
+      //     clientId,
+      //     userId
+      //   });
+      // }
 
       return category;
     } catch (error) {
