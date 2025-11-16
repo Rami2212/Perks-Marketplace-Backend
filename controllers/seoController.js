@@ -158,6 +158,14 @@ class SeoController {
     }
   });
 
+  // Get sitemap content without reading from file (for serverless)
+  getSitemapContent = catchAsync(async (req, res) => {
+    const sitemapXml = await seoService.GetSitemap();
+
+    res.setHeader('Content-Type', 'application/xml');
+    res.send(sitemapXml);
+  });
+
   // Get robots.txt content
   getRobots = catchAsync(async (req, res) => {
     const fs = require('fs').promises;
@@ -178,6 +186,14 @@ class SeoController {
         }
       });
     }
+  });
+
+  // Get robots.txt content without reading from file (for serverless)
+  getRobotsContent = catchAsync(async (req, res) => {
+    const robotsTxt = await seoService.GetRobotsTxt();
+    
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(robotsTxt);
   });
 
   // SEO analysis for a URL

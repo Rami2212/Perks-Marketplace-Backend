@@ -50,10 +50,10 @@ const pageAnalysisValidation = [
 // PUBLIC ROUTES
 
 // Serve sitemap.xml
-router.get('/sitemap.xml', seoController.getSitemap);
+router.get('/sitemap.xml', seoController.getSitemapContent);
 
 // Serve robots.txt
-router.get('/robots.txt', seoController.getRobots);
+router.get('/robots.txt', seoController.getRobotsContent);
 
 // Get page SEO data (for frontend rendering)
 router.get('/page-seo',

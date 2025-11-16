@@ -361,8 +361,8 @@ class SeoService {
             const sitemapXml = this.generateSitemapXml(urls);
 
             // Save to public directory
-            const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
-            await fs.writeFile(sitemapPath, sitemapXml, 'utf8');
+            // const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+            // await fs.writeFile(sitemapPath, sitemapXml, 'utf8');
 
             // Update last generated timestamp
             await SeoSetting.findByIdAndUpdate(seoSettings._id, {
@@ -373,6 +373,19 @@ class SeoService {
             return sitemapXml;
         } catch (error) {
             console.error('Sitemap generation error:', error);
+            throw new AppError('Failed to generate sitemap', 500, 'SITEMAP_GENERATION_ERROR');
+        }
+    }
+
+    // Generate and get sitemap.xml without saving file (for serverless)
+    async GetSitemap() {
+        try {
+            const seoSettings = await this.getActiveSettings();
+            if (seoSettings.sitemapSettings.enabled) {
+                const sitemapXml = await this.generateSitemap(seoSettings);
+                return sitemapXml;
+            }
+        } catch (error) {
             throw new AppError('Failed to generate sitemap', 500, 'SITEMAP_GENERATION_ERROR');
         }
     }
@@ -443,13 +456,26 @@ class SeoService {
             }
 
             // Save to public directory
-            const robotsPath = path.join(process.cwd(), 'public', 'robots.txt');
-            await fs.writeFile(robotsPath, robotsContent, 'utf8');
+            // const robotsPath = path.join(process.cwd(), 'public', 'robots.txt');
+            // await fs.writeFile(robotsPath, robotsContent, 'utf8');
 
             console.log('Robots.txt generated successfully');
             return robotsContent;
         } catch (error) {
             console.error('Robots.txt generation error:', error);
+            throw new AppError('Failed to generate robots.txt', 500, 'ROBOTS_GENERATION_ERROR');
+        }
+    }
+
+    // Generate and get robots.txt without saving file (for serverless)
+    async GetRobotsTxt() {
+        try {
+            const seoSettings = await this.getActiveSettings();
+            if (seoSettings.robotsSettings.enabled) {
+                const robotsTxt = await this.generateRobotsTxt(seoSettings);
+                return robotsTxt;
+            }
+        } catch (error) {
             throw new AppError('Failed to generate robots.txt', 500, 'ROBOTS_GENERATION_ERROR');
         }
     }
