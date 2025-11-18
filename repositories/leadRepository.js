@@ -426,6 +426,23 @@ class LeadRepository {
       throw new AppError('Database error while getting analytics', 500, 'DATABASE_ERROR');
     }
   }
+
+  // Get public statistics for non-authenticated users
+  async getPublicStats() {
+    try {
+      const totalLeads = await Lead.countDocuments();
+      const convertedLeads = await Lead.countDocuments({ status: 'converted' });
+      const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
+      return {
+        totalLeads,
+        convertedLeads,
+        conversionRate: conversionRate.toFixed(2)
+      };
+    } catch (error) {
+      throw new AppError('Database error while getting public lead stats', 500, 'DATABASE_ERROR');
+    }
+  }
+  
 }
 
 module.exports = new LeadRepository();

@@ -149,9 +149,88 @@ class PerkRepository {
   }
 
   // Get active perks (Public)
-  async findActivePerks(filters = {}, page = 1, limit = 20) {
+  async findActivePerks(filters = {}, page = 1, limit = 20, populate = false) {
     try {
-      return await Perk.getActivePerks(filters, page, limit);
+      const query = {
+        status: 'active',
+        isVisible: true
+      };
+
+      // Apply additional filters
+      if (filters.categoryId) query.categoryId = filters.categoryId;
+      if (filters.clientId) query.clientId = filters.clientId;
+      if (filters.isFeatured !== undefined) query.isFeatured = filters.isFeatured;
+      if (filters.isExclusive !== undefined) query.isExclusive = filters.isExclusive;
+      if (filters.approvalStatus) query['approval.status'] = filters.approvalStatus;
+      if (filters.vendorEmail) query['vendor.email'] = filters.vendorEmail;
+
+      // Date range filters
+      if (filters.dateFrom || filters.dateTo) {
+        query.createdAt = {};
+        if (filters.dateFrom) query.createdAt.$gte = new Date(filters.dateFrom);
+        if (filters.dateTo) query.createdAt.$lte = new Date(filters.dateTo);
+      }
+
+      // Search by title, description, or vendor
+      if (filters.search) {
+        query.$or = [
+          { title: { $regex: filters.search, $options: 'i' } },
+          { description: { $regex: filters.search, $options: 'i' } },
+          { 'vendor.name': { $regex: filters.search, $options: 'i' } }
+        ];
+      }
+
+      // Tags filter
+      if (filters.tags && filters.tags.length > 0) {
+        query.tags = { $in: filters.tags };
+      }
+
+      const skip = (page - 1) * limit;
+
+      let baseQuery = Perk.find(query);
+
+      if (populate) {
+        baseQuery = baseQuery
+          .populate('categoryId', 'name slug')
+          .populate('clientId', 'name email')
+          .populate('createdBy', 'name email')
+          .populate('updatedBy', 'name email');
+      }
+
+      // Default sort: featured first, then priority, then newest
+      let sortOptions = { isFeatured: -1, priority: -1, createdAt: -1 };
+      if (filters.sortBy) {
+        switch (filters.sortBy) {
+          case 'title':
+            sortOptions = { title: 1 };
+            break;
+          case 'created_desc':
+            sortOptions = { createdAt: -1 };
+            break;
+          case 'created_asc':
+            sortOptions = { createdAt: 1 };
+            break;
+          case 'views_desc':
+            sortOptions = { 'metrics.viewCount': -1 };
+            break;
+          case 'clicks_desc':
+            sortOptions = { 'metrics.clickCount': -1 };
+            break;
+          case 'priority_desc':
+            sortOptions = { priority: -1, createdAt: -1 };
+            break;
+        }
+      }
+
+      const [perks, total] = await Promise.all([
+        baseQuery
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(limit),
+        Perk.countDocuments(query)
+      ]);
+
+      return paginationUtils.createPaginationResponse(perks, page, limit, total);
     } catch (error) {
       throw new AppError('Database error while fetching active perks', 500, 'DATABASE_ERROR');
     }
@@ -506,6 +585,34 @@ class PerkRepository {
       throw new AppError('Database error during bulk update', 500, 'DATABASE_ERROR');
     }
   }
+
+  // Get public statistics for non-authenticated users
+  async getPublicStats() {
+    try {
+      const stats = await Perk.aggregate([
+        { $match: { status: 'active', isVisible: true } },
+        {
+          $group: {
+            _id: null,
+            totalActivePerks: { $sum: 1 },
+            totalViews: { $sum: '$metrics.viewCount' },
+            totalClicks: { $sum: '$metrics.clickCount' },
+            totalRedemptions: { $sum: '$metrics.redemptionCount' }
+          }
+        }
+      ]);
+
+      return stats[0] || {
+        totalActivePerks: 0,
+        totalViews: 0,
+        totalClicks: 0,
+        totalRedemptions: 0
+      };
+    } catch (error) {
+      throw new AppError('Database error while getting public stats', 500, 'DATABASE_ERROR');
+    }
+  }
+
 }
 
 module.exports = new PerkRepository();

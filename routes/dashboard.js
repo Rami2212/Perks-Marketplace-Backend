@@ -34,6 +34,16 @@ const exportValidation = [
     .withMessage('Module must be one of: overview, perks, categories, leads, ga4, blog')
 ];
 
+// Public endpoint for public statistics
+router.get('/public-stats',
+  rateLimitMiddleware.createLimiter({ 
+    max: 200,
+    windowMs: 60 * 1000,
+    message: 'Too many public stats requests, please try again later'
+  }),
+  dashboardController.getPublicStats
+);
+
 // Apply authentication to all dashboard routes
 router.use(authMiddleware.authenticate);
 

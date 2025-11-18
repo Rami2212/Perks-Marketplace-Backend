@@ -330,6 +330,26 @@ class BlogRepository {
       throw new AppError('Database error while checking slug', 500, 'DATABASE_ERROR');
     }
   }
+
+  // Get public statistics for dashboard
+  async getPublicStats() {
+    try {
+      const totalPosts = await BlogPost.countDocuments();
+      const publishedPosts = await BlogPost.countDocuments({ status: 'published' });
+      const totalViewsAgg = await BlogPost.aggregate([
+        { $group: { _id: null, totalViews: { $sum: '$analytics.viewCount' } } }
+      ]);
+      const totalViews = totalViewsAgg[0] ? totalViewsAgg[0].totalViews : 0;
+      return {
+        totalPosts,
+        publishedPosts,
+        totalViews
+      };
+    } catch (error) {
+      throw new AppError('Database error while getting public blog stats', 500, 'DATABASE_ERROR');
+    }
+  }
+  
 }
 
 module.exports = new BlogRepository();

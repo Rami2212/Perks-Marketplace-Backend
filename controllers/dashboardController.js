@@ -367,6 +367,15 @@ class DashboardController {
       return 'Error generating CSV';
     }
   }
+
+  // Public statistics
+  getPublicStats = catchAsync(async (req, res) => {
+    const data = await dashboardService.getPublicStats();
+    res.status(200).json({
+      success: true,
+      data
+    });
+  });
 }
 
 module.exports = new DashboardController();
