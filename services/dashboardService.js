@@ -919,6 +919,23 @@ class DashboardService {
             throw error;
         }
     }
+
+    // Public statistics for non-authenticated users
+    async getPublicStats() {
+        try {
+            const perkStats = await perkRepository.getPublicStats();
+            const leadStats = await leadRepository.getPublicStats();
+            const blogStats = await blogRepository.getPublicStats();
+            return {
+                perkStats,
+                leadStats,
+                blogStats
+            };
+        } catch (error) {
+            console.error('Error getting public stats:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new DashboardService();
